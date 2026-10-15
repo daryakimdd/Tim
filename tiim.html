@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Навигатор диагноза — помощь семьям</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<style>
+/* ================= БАЗА ================= */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#f3f6fa; --surface:#ffffff; --surface-2:#f8fbfd;
+  --text:#1c2836; --muted:#61748a; --border:#e3eaf2;
+  --accent:#3a7fc4; --accent-2:#5aa3dd; --accent-soft:#e9f2fa;
+  --topbar:#dcebf7; --shadow:0 4px 16px rgba(30,60,90,.08);
+  --shadow-lg:0 14px 34px rgba(30,60,90,.14);
+  --radius:16px;
+}
+[data-theme="dark"]{
+  --bg:#10161d; --surface:#1a232d; --surface-2:#212c38;
+  --text:#e3eaf2; --muted:#8fa2b5; --border:#2a3744;
+  --accent:#7fb2de; --accent-2:#a3c9ea; --accent-soft:#1f2f40;
+  --topbar:#1b2836; --shadow:0 4px 16px rgba(0,0,0,.35);
+  --shadow-lg:0 14px 34px rgba(0,0,0,.5);
+}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:var(--bg);color:var(--text);transition:background .35s,color .35s;font-size:16px;line-height:1.6}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+a{color:var(--accent);text-decoration:none}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:8px}
+
+/* ================= ВЕРХНЯЯ ПАНЕЛЬ ================= */
+.topbar{position:fixed;top:0;left:0;right:0;height:60px;background:var(--topbar);display:flex;align-items:center;gap:12px;padding:0 18px;z-index:200;transition:background .35s;box-shadow:0 1px 0 var(--border)}
+.hamburger{width:42px;height:42px;border-radius:12px;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:5px;transition:background .2s;flex:0 0 auto}
+.hamburger:hover{background:rgba(120,160,200,.18)}
+.hamburger span{display:block;width:20px;height:2px;border-radius:2px;background:var(--text);transition:transform .3s,opacity .3s}
+.hamburger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.hamburger.open span:nth-child(2){opacity:0}
+.hamburger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.topbar .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;cursor:pointer;white-space:nowrap}
+.topbar .logo .mark{width:32px;height:32px;border-radius:10px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800}
+.topbar-spacer{flex:1}
+/* поиск */
+.search-wrap{position:relative;width:min(420px,38vw)}
+.search-wrap input{width:100%;height:40px;border-radius:12px;border:1px solid var(--border);background:var(--surface);padding:0 14px 0 38px;font-size:14px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s}
+.search-wrap input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.search-wrap .s-ico{position:absolute;left:12px;top:11px;opacity:.55;pointer-events:none}
+.search-results{position:absolute;top:48px;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-lg);overflow:hidden;display:none;max-height:70vh;overflow-y:auto}
+.search-results.show{display:block}
+.sr-item{display:flex;gap:12px;align-items:center;padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s}
+.sr-item:last-child{border-bottom:none}
+.sr-item:hover{background:var(--surface-2)}
+.sr-item .sr-tag{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:2px 8px;flex:0 0 auto}
+.sr-item .sr-title{font-size:14px;font-weight:600}
+.sr-item .sr-desc{font-size:12px;color:var(--muted)}
+.sr-empty{padding:22px 16px;text-align:center;color:var(--muted);font-size:14px}
+/* переключатель направления */
+.dir-switch{display:flex;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:3px}
+.dir-switch button{padding:7px 16px;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted);transition:all .25s}
+.dir-switch button.active{background:var(--accent);color:#fff}
+/* тема и профиль */
+.icon-btn{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:18px;transition:background .2s}
+.icon-btn:hover{background:rgba(120,160,200,.18)}
+.profile{display:flex;align-items:center;gap:9px;padding:5px 12px 5px 5px;border-radius:24px;background:var(--surface);border:1px solid var(--border);cursor:pointer;transition:box-shadow .2s}
+.profile:hover{box-shadow:var(--shadow)}
+.profile .avatar{width:32px;height:32px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.profile .p-name{font-size:13px;font-weight:600}
+@media(max-width:860px){.profile .p-name,.dir-switch button span{display:none}.dir-switch button{padding:7px 12px}}
+
+/* ================= SIDEBAR ================= */
+.sidebar{position:fixed;top:60px;left:0;bottom:0;width:272px;background:var(--surface);border-right:1px solid var(--border);transform:translateX(-105%);transition:transform .35s cubic-bezier(.4,0,.2,1);z-index:150;display:flex;flex-direction:column}
+.sidebar.open{transform:translateX(0)}
+.side-brand{padding:20px 22px 14px;font-size:15px;font-weight:800;display:flex;align-items:center;gap:10px}
+.side-brand .mark{width:34px;height:34px;border-radius:10px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px}
+.side-nav{flex:1;overflow-y:auto;padding:6px 12px 12px}
+.side-nav a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;font-size:14.5px;color:var(--muted);font-weight:500;transition:all .18s;margin-bottom:2px}
+.side-nav a svg{flex:0 0 auto;opacity:.75}
+.side-nav a:hover{background:var(--surface-2);color:var(--text)}
+.side-nav a.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.side-help{margin:10px 14px 16px;padding:14px;border-radius:14px;background:var(--surface-2);border:1px solid var(--border)}
+.side-help b{display:block;font-size:14px;margin-bottom:4px}
+.side-help p{font-size:12.5px;color:var(--muted);margin-bottom:10px}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;font-size:13px;font-weight:600;padding:9px 16px;border-radius:10px;transition:all .2s}
+.btn:hover{background:var(--accent-2);transform:translateY(-1px)}
+.overlay{position:fixed;inset:0;background:rgba(15,25,40,.4);z-index:120;opacity:0;pointer-events:none;transition:opacity .3s}
+.overlay.show{opacity:1;pointer-events:auto}
+
+/* ================= КОНТЕНТ ================= */
+.content{margin-top:60px;padding:28px clamp(16px,4vw,48px) 60px;max-width:1200px;transition:margin-left .35s cubic-bezier(.4,0,.2,1)}
+.sidebar.open ~ .content{margin-left:272px}
+@media(max-width:900px){.sidebar.open ~ .content{margin-left:0}}
+.page{display:none;animation:fadeUp .35s ease}
+.page.active{display:block}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ================= ЛЕНДИНГ ================= */
+.landing{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;text-align:center;padding:70px 24px 24px;margin-top:-60px}
+.landing .over{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:14px}
+.landing h1{font-size:clamp(28px,4.5vw,44px);font-weight:800;margin-bottom:44px}
+.diag-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,360px));gap:26px;justify-content:center;width:100%;max-width:820px}
+.diag-card{background:var(--surface);border:1px solid var(--border);border-radius:22px;padding:40px 30px;cursor:pointer;text-align:center;transition:transform .3s,box-shadow .3s,border-color .3s;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:250px}
+.diag-card::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:linear-gradient(90deg,var(--accent),var(--accent-2));opacity:0;transition:opacity .3s}
+.diag-card:hover{transform:translateY(-7px);box-shadow:var(--shadow-lg);border-color:var(--accent)}
+.diag-card:hover::before{opacity:1}
+.diag-card .badge{display:inline-block;font-size:13px;font-weight:800;letter-spacing:.12em;color:var(--accent);background:var(--accent-soft);border-radius:10px;padding:6px 16px;margin-bottom:16px}
+.diag-card h2{font-size:22px;font-weight:700;margin-bottom:10px}
+.diag-card p{color:var(--muted);font-size:14.5px;margin-bottom:22px}
+.diag-card .go{font-size:14px;font-weight:600;color:var(--accent);display:inline-flex;align-items:center;gap:8px;transition:gap .25s}
+.diag-card:hover .go{gap:14px}
+
+/* ================= DASHBOARD ================= */
+.dash-head{margin-bottom:30px}
+.dash-head .crumb{font-size:13px;color:var(--muted);margin-bottom:8px}
+.dash-head h1{font-size:clamp(26px,3.5vw,36px);font-weight:800;margin-bottom:10px}
+.dash-head p{color:var(--muted);max-width:640px}
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:18px;max-width:920px}
+.cat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;cursor:pointer;transition:transform .3s,box-shadow .3s,border-color .3s;display:flex;flex-direction:column;gap:10px}
+.cat-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg);border-color:var(--accent)}
+.cat-card .ico{width:48px;height:48px;border-radius:14px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center}
+.cat-card .ico svg{stroke:var(--accent)}
+.cat-card h3{font-size:16.5px;font-weight:700}
+.cat-card p{font-size:13.5px;color:var(--muted);flex:1}
+.cat-card .arrow{color:var(--accent);font-size:18px;transition:transform .25s;align-self:flex-end}
+.cat-card:hover .arrow{transform:translateX(5px)}
+
+/* ================= СТАТЬЯ ================= */
+.breadcrumb{font-size:13px;color:var(--muted);margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap}
+.breadcrumb a{color:var(--muted);transition:color .2s}
+.breadcrumb a:hover{color:var(--accent)}
+.breadcrumb .sep{opacity:.5}
+.article-head h1{font-size:clamp(24px,3vw,34px);font-weight:800;margin-bottom:10px}
+.article-head .lead{color:var(--muted);max-width:680px;margin-bottom:28px}
+.article-layout{display:grid;grid-template-columns:230px 1fr;gap:36px;align-items:start}
+@media(max-width:900px){.article-layout{grid-template-columns:1fr}.toc{position:static!important}}
+.toc{position:sticky;top:84px;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px}
+.toc b{display:block;font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:12px}
+.toc a{display:flex;gap:10px;padding:7px 10px;border-radius:9px;font-size:13.5px;color:var(--muted);transition:all .18s;margin-bottom:2px}
+.toc a .num{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:7px;padding:1px 7px;align-self:flex-start;margin-top:2px}
+.toc a:hover{color:var(--text);background:var(--surface-2)}
+.toc a.active{color:var(--accent);background:var(--accent-soft);font-weight:600}
+.article-body{max-width:780px}
+.article-body h2{font-size:21px;font-weight:700;margin:38px 0 14px;scroll-margin-top:84px;display:flex;gap:12px;align-items:baseline}
+.article-body h2 .h-num{font-size:13px;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:2px 10px;font-weight:700}
+.article-body p{margin-bottom:14px;color:var(--text)}
+.article-body p.muted,.muted{color:var(--muted)}
+.article-body ul,.article-body ol{margin:0 0 16px 22px}
+.article-body li{margin-bottom:8px}
+.block{border-radius:14px;padding:18px 20px;margin:22px 0;border:1px solid var(--border);font-size:14.5px}
+.block .b-title{display:flex;align-items:center;gap:9px;font-weight:700;font-size:14px;margin-bottom:8px}
+.block.important{background:var(--accent-soft);border-color:transparent}
+.block.important .b-title{color:var(--accent)}
+.block.tip{background:var(--surface-2)}
+.block.tip .b-title{color:var(--text)}
+.block.steps{background:var(--surface);border:1px solid var(--border)}
+.step-row{display:flex;gap:14px;padding:10px 0;border-bottom:1px dashed var(--border)}
+.step-row:last-child{border-bottom:none}
+.step-row .s-num{width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.step-row div p{margin-bottom:2px}
+.step-row div small{color:var(--muted);font-size:13px}
+.doc-chip{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:13px 16px;margin-bottom:10px;transition:border-color .2s,transform .2s}
+.doc-chip:hover{border-color:var(--accent);transform:translateX(4px)}
+.doc-chip .d-ico{width:36px;height:36px;border-radius:10px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.doc-chip b{font-size:14px}
+.doc-chip small{display:block;color:var(--muted);font-size:12.5px}
+
+/* ================= FAQ ================= */
+.faq-item{background:var(--surface);border:1px solid var(--border);border-radius:14px;margin-bottom:12px;overflow:hidden;transition:border-color .2s}
+.faq-item.open{border-color:var(--accent)}
+.faq-q{width:100%;display:flex;justify-content:space-between;align-items:center;gap:14px;padding:17px 20px;font-size:15px;font-weight:600;text-align:left;color:var(--text)}
+.faq-q .chev{transition:transform .3s;color:var(--accent);flex:0 0 auto}
+.faq-item.open .chev{transform:rotate(180deg)}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease;color:var(--muted);font-size:14.5px}
+.faq-a > div{padding:0 20px 18px}
+
+/* ================= КОНТАКТЫ / ИСТОРИИ ================= */
+.contacts-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:18px}
+.contact-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;transition:transform .25s,box-shadow .25s}
+.contact-card:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+.contact-card h3{font-size:15.5px;margin-bottom:6px}
+.contact-card p{font-size:13.5px;color:var(--muted);margin-bottom:12px}
+.contact-card .c-line{display:flex;gap:9px;align-items:center;font-size:13.5px;margin-top:6px}
+.placeholder-note{background:var(--surface-2);border:1px dashed var(--border);border-radius:14px;padding:18px 20px;color:var(--muted);font-size:14px;margin:22px 0}
+
+/* ================= СТАТЬИ ================= */
+.art-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:transform .3s,box-shadow .3s,border-color .3s;cursor:pointer;display:flex;flex-direction:column}
+.art-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-lg);border-color:var(--accent)}
+.art-cover{background:linear-gradient(135deg,var(--accent-soft),var(--surface-2));display:flex;align-items:center;justify-content:center}
+.art-cover span{font-size:22px;font-weight:800;color:var(--accent);opacity:.85;letter-spacing:.06em}
+.art-body{padding:18px 20px 20px}
+.art-tag{display:inline-block;font-size:11.5px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:3px 10px;margin-bottom:10px}
+.art-body h3{font-size:15.5px;margin-bottom:8px}
+.art-body p{font-size:13.5px;color:var(--muted);margin-bottom:14px;flex:1}
+.art-go{font-size:13.5px;font-weight:600;color:var(--accent)}
+.art-card:hover .art-go{text-decoration:underline}
+
+/* ================= ПЕРЕКЛЮЧАТЕЛЬ ЯЗЫКА (выпадающий) ================= */
+.lang-wrap{position:relative}
+.lang-icon{font-size:19px}
+.lang-menu{position:absolute;top:50px;right:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow-lg);padding:6px;display:none;min-width:165px;z-index:350}
+.lang-menu.show{display:block}
+.lang-menu button{display:flex;justify-content:space-between;align-items:center;gap:16px;width:100%;padding:9px 14px;border-radius:9px;font-size:14px;font-weight:600;color:var(--muted);transition:all .15s}
+.lang-menu button:hover{background:var(--surface-2);color:var(--text)}
+.lang-menu button.active{color:var(--accent)}
+.lang-menu .check{opacity:0;font-size:12px}
+.lang-menu button.active .check{opacity:1}
+#langLanding{position:fixed;top:12px;right:14px;z-index:300}
+
+/* ================= ВИДЕО-ОВЕРЛЕЙ / ЧЁРНЫЙ «?» ================= */
+.video-overlay{position:fixed;inset:0;background:#0d1420;z-index:500;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .4s}
+.video-overlay.show{opacity:1;pointer-events:auto}
+.video-frame{width:min(860px,92vw);aspect-ratio:16/9;border-radius:18px;background:linear-gradient(135deg,#223047,#141d2c);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#cfe0f2;text-align:center;padding:20px}
+.video-frame .play{width:74px;height:74px;font-size:26px;padding-left:5px;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.video-frame b{font-size:17px}
+.video-frame p{font-size:13.5px;opacity:.75;max-width:440px}
+.video-skip{position:absolute;right:26px;bottom:26px;width:46px;height:46px;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;font-size:19px;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.video-skip:hover{background:rgba(255,255,255,.3)}
+#dirUnsure{color:#151515;font-weight:800;font-size:17px}
+.diag-card .badge.badge-q{color:#151515}
+
+/* ================= КАРТОЧКИ РАЗДЕЛОВ (подтекст под заголовком) ================= */
+body{overflow-x:hidden}
+.cards-grid{grid-template-columns:1fr;max-width:760px}
+.cards-grid>*{min-width:0}
+.cat-card{flex-direction:column;align-items:flex-start;gap:8px;padding:20px 22px;min-width:0}
+.cat-card h3{margin:0}
+.cat-card p{margin:0}
+.cat-card .arrow{align-self:flex-end}
+
+/* ================= КАРУСЕЛЬ СТАТЕЙ (на дашборде) ================= */
+.carousel-wrap{position:relative;width:100%;min-width:0}
+.art-carousel{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;padding:4px 2px 12px;scrollbar-width:thin;max-width:100%;-webkit-overflow-scrolling:touch}
+.art-card{flex:0 0 280px;scroll-snap-align:start;min-height:390px}
+.art-cover{height:165px}
+/* мини-карусель: ровно по центру карточки, 3 статьи в рамках, без стрелки */
+.art-carousel.mini{gap:10px;padding:4px 2px 10px}
+.art-carousel.mini .art-card{flex:0 0 calc((100% - 20px)/3);min-height:250px;min-width:0;overflow:hidden}
+.art-carousel.mini .art-cover{height:140px}
+.art-carousel.mini .art-body h3{display:none}
+.art-carousel.mini .art-tag{font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;display:block}
+.art-carousel.mini .art-body{padding:10px 12px}
+
+/* ================= ШАПКА НА ТЕЛЕФОНЕ (всё вмещается, язык на виду) ================= */
+.search-toggle{display:none}
+@media(max-width:640px){
+  .topbar{gap:5px;padding:0 10px}
+  .content{padding-left:16px;padding-right:16px}
+  #accountBtn{display:none}
+  .search-wrap{flex:1;min-width:0}
+  .dir-switch button{padding:4px 6px;font-size:10.5px}
+  .icon-btn{width:34px;height:34px}
+  .lang-menu{min-width:150px}
+}
+@media(max-width:380px){
+  .dir-switch button{padding:3px 5px;font-size:10px}
+  .topbar{gap:4px;padding:0 8px}
+}
+
+/* ================= ПЛАНШЕТ: шапка и поиск вмещаются ================= */
+@media(min-width:641px) and (max-width:900px){
+  .topbar{gap:8px;padding:0 12px}
+  .search-wrap{width:min(280px,26vw)}
+}
+
+/* ================= ЛЕНТА СТАТЕЙ (страница «Статьи») ================= */
+.articles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px}
+
+/* ================= ИКОНКА ТЕМЫ ================= */
+#themeBtn svg{transition:transform .45s cubic-bezier(.34,1.56,.64,1)}
+#themeBtn:hover svg{transform:rotate(24deg) scale(1.18)}
+#themeBtn:active svg{transform:scale(.92)}
+
+/* ================= КНОПКА НАЗАД / ВИДЕО / ЗАМЕТКА ================= */
+.back-btn{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--muted);padding:8px 14px 8px 10px;border-radius:10px;margin-bottom:16px;transition:all .2s}
+.back-btn:hover{background:var(--surface-2);color:var(--accent)}
+.video-card{display:flex;gap:18px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:28px;align-items:center}
+.video-thumb{width:200px;height:120px;flex:0 0 auto;border-radius:14px;background:linear-gradient(135deg,var(--accent-soft),var(--surface-2));display:flex;align-items:center;justify-content:center;cursor:pointer;transition:transform .25s}
+.video-thumb:hover{transform:scale(1.03)}
+.play{width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;padding-left:4px;box-shadow:var(--shadow)}
+.video-info b{font-size:15.5px;display:block;margin-bottom:6px}
+.video-info p{font-size:13.5px;color:var(--muted)}
+@media(max-width:640px){.video-card{flex-direction:column;align-items:stretch}.video-thumb{width:100%}}
+.diag-card .diag-note{color:var(--muted);font-size:14px;margin:0 0 22px;max-width:340px}
+
+/* ================= АККАУНТ / АВТОРИЗАЦИЯ ================= */
+#accountBtn.logged{background:var(--accent);color:#fff}
+.auth-overlay{position:fixed;inset:0;background:rgba(15,25,40,.45);z-index:400;display:flex;align-items:center;justify-content:center;padding:18px;opacity:0;pointer-events:none;transition:opacity .3s}
+.auth-overlay.show{opacity:1;pointer-events:auto}
+.auth-modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:400px;position:relative;box-shadow:var(--shadow-lg);transform:translateY(14px);transition:transform .3s}
+.auth-overlay.show .auth-modal{transform:none}
+.auth-close{position:absolute;top:14px;right:14px;width:34px;height:34px;border-radius:10px;color:var(--muted);font-size:15px;transition:background .2s}
+.auth-close:hover{background:var(--surface-2);color:var(--text)}
+.auth-title{font-size:20px;font-weight:800;margin-bottom:18px;text-align:center}
+.auth-tabs{display:flex;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:3px;margin-bottom:20px}
+.auth-tabs button{flex:1;padding:9px 0;border-radius:9px;font-size:14px;font-weight:600;color:var(--muted);transition:all .25s}
+.auth-tabs button.active{background:var(--surface);color:var(--accent);box-shadow:0 1px 4px rgba(30,60,90,.12)}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px}
+.field input{width:100%;height:44px;border-radius:12px;border:1px solid var(--border);background:var(--bg);padding:0 14px;font-size:14px;color:var(--text);outline:none;transition:border-color .2s,box-shadow .2s}
+.field input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.contact-row{display:flex;gap:8px}
+.contact-toggle{flex:0 0 auto;height:44px;padding:0 14px;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);font-size:13px;font-weight:600;color:var(--accent);transition:background .2s}
+.contact-toggle:hover{background:var(--accent-soft)}
+.contact-row input{flex:1}
+.auth-error{color:#d1603a;font-size:13px;min-height:18px;margin-bottom:8px;text-align:center}
+.auth-error.ok{color:#3d9a6d}
+.auth-alt{display:block;margin:14px auto 0;color:var(--accent);font-size:13.5px;font-weight:600}
+.auth-alt:hover{text-decoration:underline}
+.msg-box{background:var(--accent-soft);border:1px dashed var(--accent);border-radius:12px;padding:12px 14px;font-size:13.5px;margin-bottom:14px;line-height:1.5}
+.auth-submit{width:100%;justify-content:center;height:46px;font-size:15px;border-radius:12px}
+.auth-avatar{width:72px;height:72px;border-radius:50%;background:var(--accent);color:#fff;font-size:28px;font-weight:800;display:flex;align-items:center;justify-content:center;margin:6px auto 12px}
+.auth-name{text-align:center;font-size:18px;font-weight:700;margin-bottom:4px}
+.auth-contact{text-align:center;color:var(--muted);font-size:14px;margin-bottom:20px}
+</style>
+</head>
+<body>
+
+<!-- ================= ВЕРХНЯЯ ПАНЕЛЬ ================= -->
+<header class="topbar" id="topbar" style="display:none">
+  <button class="hamburger" id="hamburger" aria-label="Меню"><span></span><span></span><span></span></button>
+  <button class="icon-btn" id="accountBtn" title="Аккаунт" aria-label="Аккаунт">
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>
+  </button>
+  <div class="topbar-spacer"></div>
+  <div class="search-wrap">
+    <button class="icon-btn search-toggle" data-search-toggle aria-label="Поиск"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></button>
+    <svg class="s-ico" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="searchInput" type="text" placeholder="Поиск по сайту…" autocomplete="off">
+    <div class="search-results" id="searchResults"></div>
+  </div>
+  <div class="dir-switch" id="dirSwitch">
+    <button data-dir="ras" class="active">РАС</button>
+    <button data-dir="dcp">ДЦП</button>
+    <button data-dir="unsure" id="dirUnsure" title="Я не уверен(а) в диагнозе">?</button>
+  </div>
+  <div class="lang-wrap" id="langTop">
+    <button class="icon-btn lang-icon" data-lang-toggle aria-label="Language">🌐</button>
+    <div class="lang-menu" id="langMenuTop"></div>
+  </div>
+  <button class="icon-btn" id="themeBtn" title="Сменить тему" aria-label="Сменить тему">🌙</button>
+</header>
+
+<!-- ================= МОДАЛЬНОЕ ОКНО ВХОДА / РЕГИСТРАЦИИ ================= -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-modal" role="dialog" aria-modal="true">
+    <button class="auth-close" id="authClose" aria-label="Закрыть">✕</button>
+    <div id="authFormWrap">
+      <h2 class="auth-title" id="authTitle">Вход в аккаунт</h2>
+      <div class="auth-tabs">
+        <button class="active" data-tab="login">Вход</button>
+        <button data-tab="register">Регистрация</button>
+      </div>
+      <form id="authForm" novalidate>
+        <div class="field" id="userField" style="display:none">
+          <label id="lblUser">Имя пользователя</label>
+          <input type="text" id="authUser" placeholder="Как к вам обращаться" autocomplete="username">
+        </div>
+        <div class="field">
+          <label id="authContactLabel">Электронная почта</label>
+          <div class="contact-row">
+            <button type="button" class="contact-toggle" id="contactToggle">почта</button>
+            <select id="countrySelect" class="country-select" style="display:none" aria-label="Страна"></select>
+            <input type="email" id="authContact" placeholder="example@mail.ru" autocomplete="email">
+          </div>
+        </div>
+        <div class="field" id="passField">
+          <label id="lblPass">Пароль</label>
+          <div class="pass-row">
+            <input type="password" id="authPass" placeholder="••••••••" autocomplete="current-password">
+            <button type="button" class="eye-btn" data-eye="authPass" title="Показать пароль" aria-label="Показать пароль">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="field" id="codeField" style="display:none">
+          <label id="lblCode">Код из сообщения</label>
+          <input type="text" id="authCode" placeholder="123456" autocomplete="one-time-code">
+        </div>
+        <div class="field" id="newPassField" style="display:none">
+          <label id="lblNewPass">Новый пароль</label>
+          <div class="pass-row">
+            <input type="password" id="authNewPass" placeholder="••••••••" autocomplete="new-password">
+            <button type="button" class="eye-btn" data-eye="authNewPass" title="Показать пароль" aria-label="Показать пароль">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-6.5 10-6.5S22 12 22 12s-3.5 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="2.8"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="msg-box" id="msgBox" style="display:none"></div>
+        <div class="auth-error" id="authError"></div>
+        <button type="submit" class="btn auth-submit" id="authSubmit">Войти</button>
+        <button type="button" class="auth-alt" id="forgotBtn">Забыли пароль?</button>
+      </form>
+    </div>
+    <div id="authProfileWrap" style="display:none">
+      <h2 class="auth-title" id="pfTitle">Ваш профиль</h2>
+      <div class="auth-avatar" id="pfAvatar">Г</div>
+      <div class="auth-name" id="pfName">Гость</div>
+      <div class="auth-contact" id="pfContact"></div>
+      <button class="btn auth-submit" id="logoutBtn">Выйти</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+
+<!-- ПОЛНОЭКРАННОЕ ВИДЕО (направление «unsure») -->
+<div class="video-overlay" id="videoOverlay">
+  <div class="video-frame">
+    <span class="play">▶</span>
+    <b id="videoTitle"></b>
+    <p id="videoNote"></p>
+  </div>
+  <button class="video-skip" id="videoSkip" aria-label="Пропустить">→</button>
+</div>
+
+<!-- ================= SIDEBAR ================= -->
+<aside class="sidebar" id="sidebar" style="display:none">
+  <div class="side-brand"><span class="mark">Н</span>Навигатор диагноза</div>
+  <nav class="side-nav" id="sideNav"></nav>
+</aside>
+
+<!-- ================= СТРАНИЦЫ ================= -->
+<main class="content" id="content">
+
+  <!-- ЛЕНДИНГ -->
+  <section class="page" id="page-home">
+    <div class="lang-wrap" id="langLanding">
+      <button class="icon-btn lang-icon" data-lang-toggle aria-label="Language">🌐</button>
+      <div class="lang-menu" id="langMenuLanding"></div>
+    </div>
+    <div class="landing">
+      <div class="over" id="landingOver">Информационная поддержка семей</div>
+      <h1 id="landingTitle">Выберите интересующий диагноз</h1>
+      <div class="diag-grid">
+        <div class="diag-card" data-dir="ras">
+          <span class="badge">РАС</span>
+          <h2 class="diag-name">Расстройства аутистического спектра</h2>
+          <span class="go diag-go">Перейти в раздел <span>→</span></span>
+        </div>
+        <div class="diag-card" data-dir="dcp">
+          <span class="badge">ДЦП</span>
+          <h2 class="diag-name">Детский церебральный паралич</h2>
+          <span class="go diag-go">Перейти в раздел <span>→</span></span>
+        </div>
+        <div class="diag-card" data-dir="unsure">
+          <span class="badge badge-q">?</span>
+          <h2 class="diag-name">Я не уверен(а) в диагнозе ребёнка</h2>
+          <p class="diag-note">Если вы замечаете особенности в развитии ребёнка, но диагноз ещё не установлен или есть сомнения в его точности.</p>
+          <span class="go diag-go">Перейти в раздел <span>→</span></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- РАЗДЕЛ (dashboard / статьи и т.д.) -->
+  <section class="page" id="page-section"></section>
+</main>
+
+<script>
+/* ===================== ДАННЫЕ ===================== */
+/* Структура переиспользуется для обоих направлений. Содержимое статей —
+   каркас с местами для будущих материалов (п.19 ТЗ). */
+const ICONS = {
+  home:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V21h-6v-6H9v6H3z"/></svg>',
+  info:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v5h1"/></svg>',
+  rights:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 7v6c0 5 3.5 7.5 8 8 4.5-.5 8-3 8-8V7z"/><path d="m9 12 2 2 4-4"/></svg>',
+  doc:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 3h7l4 4v14H7z"/><path d="M14 3v4h4M10 12h5M10 16h5"/></svg>',
+  steth:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3v5a4 4 0 0 0 8 0V3"/><path d="M10 12v3a5 5 0 0 0 10 0v-2"/><circle cx="20" cy="11" r="2"/></svg>',
+  rehab:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6 9 17l-4-4"/><path d="M21 12a9 9 0 1 1-4-7.5"/></svg>',
+  folder:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+  phone:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9 10a3 3 0 0 1 6 0c0 2-3 2.5-3 5M12 18h.01"/></svg>',
+  story:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  faq:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9.7c0 1.7-2.4 2.2-2.4 3.8M12 17h.01"/></svg>',
+  user:'<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 5-6 8-6s6.5 2 8 6"/></svg>'
+};
+function sec(id, icon, titles, shorts, keywords){
+  return {id, icon, titles, shorts, keywords};
+}
+const HOME_SEC = sec('home','home',{ru:'Главная',kz:'Басты бет',en:'Home'},{ru:'Главная страница раздела',kz:'Бөлімнің басты беті',en:'Section home page'},{ru:'главная',kz:'басты бет',en:'home'});
+const ABOUT_SEC = sec('about','info',{ru:'О диагнозе',kz:'Диагноз туралы',en:'About the diagnosis'},{ru:'Что такое диагноз: основная информация простым языком',kz:'Диагноз деген не: қарапайым тілдегі негізгі ақпарат',en:'What the diagnosis is: key information in plain language'},{ru:'информация диагноз что такое аутизм рас расстройство дцп паралич симптомы',kz:'диагноз ақпарат аутизм белгілері',en:'diagnosis information autism cerebral palsy symptoms'});
+const ARTICLES_RAS = sec('articles','story',{ru:'Статьи',kz:'Мақалалар',en:'Articles'},{ru:'Интересные статьи на менее официальные темы',kz:'Ресми емес тақырыптарға қызықты мақалалар',en:'Informal articles on everyday topics'},{ru:'статьи блог чтение опыт неформальное',kz:'мақалалар мақала оқу',en:'articles blog reading experience'});
+const ARTICLES_DCP = sec('articles','story',{ru:'Истории',kz:'Оқиғалар',en:'Stories'},{ru:'Истории и советы от реальных людей',kz:'Нақты адамдардың оқиғалары мен кеңестері',en:'Stories and advice from real people'},{ru:'истории советы люди опыт',kz:'оқиғалар кеңестер',en:'stories advice people experience'});
+const RIGHTS_SEC = sec('rights','rights',{ru:'Права и льготы',kz:'Құқықтар және жеңілдіктер',en:'Rights and benefits'},{ru:'Права ребёнка и семьи, социальные льготы и выплаты',kz:'Бала мен отбасының құқықтары, әлеуметтік жеңілдіктер мен төлемдер',en:'Child and family rights, social benefits and payments'},{ru:'права льготы выплаты пособия компенсации скидки',kz:'құқықтар жеңілдіктер төлемдер',en:'rights benefits payments allowances'});
+const DISABILITY_SEC = sec('disability','doc',{ru:'Как оформить инвалидность',kz:'Мүгедектікті рәсімдеу',en:'How to obtain disability status'},{ru:'Пошаговая инструкция по оформлению инвалидности',kz:'Мүгедектікті рәсімдеу бойынша қадамдық нұсқаулық',en:'Step-by-step guide to disability registration'},{ru:'инвалидность оформить ИПРА МСЭ справка комиссия группа',kz:'мүгедектік анықтама рәсімдеу',en:'disability registration certificate'});
+const REHAB_SEC = sec('rehab','rehab',{ru:'Реабилитация',kz:'Реабилитация',en:'Rehabilitation'},{ru:'Виды реабилитации и доступная помощь',kz:'Реабилитация түрлері және қолжетімді көмек',en:'Types of rehabilitation and available help'},{ru:'реабилитация ЛФК массаж логопед занятия АВА коррекция',kz:'реабилитация емдеу көмек',en:'rehabilitation therapy massage correction'});
+const SECTIONS_BY_DIR = {
+  ras:[HOME_SEC, ABOUT_SEC, ARTICLES_RAS, RIGHTS_SEC, DISABILITY_SEC, REHAB_SEC],
+  dcp:[HOME_SEC, ABOUT_SEC, ARTICLES_DCP, RIGHTS_SEC, DISABILITY_SEC, REHAB_SEC],
+  unsure:[
+    HOME_SEC,
+    sec('signs','info',{ru:'Главные признаки РАС',kz:'РАС-тың негізгі белгілері',en:'Key signs of ASD'},{ru:'На что обратить внимание в развитии ребёнка',kz:'Баланың дамуында неліктіге назар аудару керек',en:'What to look for in your child’s development'},{ru:'признаки симптомы рас аутизм поведение',kz:'белгілер аутизм',en:'signs symptoms autism behavior'}),
+    sec('similar','faq',{ru:'Похожие на РАС диагнозы',kz:'РАС-ке ұқсас диагноздар',en:'Conditions similar to ASD'},{ru:'Какие состояния могут напоминать РАС',kz:'Қай жағдайлар РАС-ке ұқсас болуы мүмкін',en:'Which conditions can resemble ASD'},{ru:'похожие диагнозы синдром дифференциальная диагностика',kz:'ұқсас диагноздар',en:'similar conditions differential diagnosis'}),
+    sec('specialists','steth',{ru:'Специалисты, подтверждающие диагноз',kz:'Диагнозды растайтын мамандар',en:'Specialists who confirm the diagnosis'},{ru:'К каким врачам обратиться для подтверждения',kz:'Диагнозды растау үшін қандай мамандарға жүгіну керек',en:'Which specialists to see for confirmation'},{ru:'специалисты врачи диагностика подтверждение психиатр психолог',kz:'мамандар дәрігерлер растау',en:'specialists doctors confirmation diagnosis'})
+  ]
+};
+function sectionsFor(dir){ return SECTIONS_BY_DIR[dir] || SECTIONS_BY_DIR.ras; }
+const DIRS = {
+  ras:{code:'РАС',
+    name:{ru:'Расстройства аутистического спектра',kz:'Аутизм спектрінің бұзылыстары',en:'Autism Spectrum Disorders'},
+    welcome:{
+      ru:'Здесь собрана понятная информация о диагнозе, доступной помощи, льготах, документах и дальнейших шагах.',
+      kz:'Мұнда диагноз, қолжетімді көмек, жеңілдіктер, құжаттар және кейінгі қадамдар туралы түсінікті ақпарат жинақталған.',
+      en:'Clear information about the diagnosis, available help, benefits, documents and next steps — all in one place.'},
+    keys:'рас аутизм расстройства аутистического спектра autism spectrum'},
+  dcp:{code:'ДЦП',
+    name:{ru:'Детский церебральный паралич',kz:'Балалардың церебралды салсыздығы',en:'Cerebral Palsy'},
+    welcome:{
+      ru:'Здесь собрана понятная информация о диагнозе, доступной помощи, льготах, документах и дальнейших шагах.',
+      kz:'Мұнда диагноз, қолжетімді көмек, жеңілдіктер, құжаттар және кейінгі қадамдар туралы түсінікті ақпарат жинақталған.',
+      en:'Clear information about the diagnosis, available help, benefits, documents and next steps — all in one place.'},
+    keys:'дцп детский церебральный паралич cerebral palsy'},
+  unsure:{code:'?',
+    name:{ru:'Я не уверен(а) в диагнозе',kz:'Диагнозға сенімсізбін',en:'I’m unsure about the diagnosis'},
+    welcome:{
+      ru:'Здесь вы найдёте, с чего начать, если диагноз ещё не установлен или вы сомневаетесь в нём.',
+      kz:'Диагноз әлі қойылмаған немесе оған сенімсіз болсаңыз, мұнда не істейтініңізді табасыз.',
+      en:'Here you will find where to start if the diagnosis has not been made yet or you have doubts about it.'},
+    keys:'не уверен сомнения диагноз особенности развития unsure doubts diagnosis'}
+};
+/* «О диагнозе» отображается как «О РАС» / «О ДЦП» в зависимости от направления */
+function titleOf(s, dir){
+  if(s.id !== 'about') return s.titles[lang];
+  const code = dir ? DIRS[dir].code : '';
+  if(lang === 'kz') return code + ' туралы';
+  if(lang === 'en') return 'About ' + code;
+  return 'О ' + (code || 'диагнозе');
+}
+function shortOf(s){ return s.shorts[lang]; }
+
+/* ===================== ЯЗЫКИ: ҚЗ / РУ / EN ===================== */
+const LANGS = ['ru','kz','en'];
+const LANG_LABEL = {ru:'РУ',kz:'ҚЗ',en:'EN'};
+let lang = localStorage.getItem('nd-lang') || 'ru';
+const T = {
+ru:{
+  landing_over:'Информационная поддержка семей', landing_title:'Выберите интересующий диагноз', go:'Перейти в раздел',
+  welcome:'Добро пожаловать', welcome_user:'Добро пожаловать, {name}', crumb_home:'Главная', search_ph:'Поиск по сайту…', no_res:'По вашему запросу «{q}» ничего не найдено',
+  help_t:'Нужна помощь?', help_x:'Не нашли ответ? Свяжитесь с нами — поможем разобраться.', help_b:'Контакты →',
+  toc_title:'Содержание', toc:['Основная информация','Кто имеет право','Необходимые документы','Как получить помощь','Куда обращаться'],
+  a_lead:'{short} — направление «{name}». Раздел оформлен как пошаговая статья: от общей информации до конкретных действий.',
+  a_s1:'Здесь будет размещено основное описание раздела «{title}» для направления «{name}» — простым и спокойным языком, без медицинской терминологии.',
+  a_tip:'Полезно знать', a_tip_x:'Основные термины и понятия раздела будут кратко объяснены в этом блоке.',
+  a_s2:'Здесь будет список категорий семей и детей, которые могут рассчитывать на помощь по этому разделу.',
+  a_imp:'Важно', a_imp_x:'Ключевые условия и ограничения будут вынесены в этот блок, чтобы их было сложно пропустить.',
+  a_s3:'Ориентировочный перечень документов (будет уточнён по вашим материалам):',
+  docs:['Свидетельство о рождении ребёнка','Справка об установлении диагноза','Медицинские документы (по требованию)'],
+  docs_note:'Оригинал и копия',
+  a_steps:'Шаг за шагом',
+  steps:[['Обратиться к специалисту','Первичная консультация и направления.'],['Получить необходимые документы','Сбор справок и заключений.'],['Подать заявление','В нужную организацию или онлайн.'],['Пройти необходимые процедуры','Комиссия, обследование, собеседование.'],['Получить решение','Итоговый документ и дальнейшие шаги.']],
+  a_s5:'Здесь будут контакты организаций, принимающих документы и отвечающих на вопросы по разделу.',
+  a_ct:'Куда обратиться', a_ct_x:'Список учреждений и телефонов появится после наполнения раздела материалами.',
+  a_ph:'Содержание этой статьи будет заполнено по предоставленным вами материалам и референсу раздела.',
+  art_h1:'Статьи', art_lead:'Менее официальные темы: жизнь, эмоции, быт — всё, о чём не пишут в инструкциях. Направление «{name}».',
+  topics:['Жизнь с диагнозом','Эмоции и поддержка','Быт и режим дня','Школа и детский сад','Отношения в семье','Отдых и выходные'],
+  art_soon:'Статья скоро появится', art_read:'Читать →', art_ph:'Здесь выйдет публикация на тему «{t}» — тёплая, простая и честная.',
+  art_note:'Статьи будут добавлены по вашим материалам.', dash_note:'Этот раздел будет дополняться материалами по вашему направлению.',
+  th_dark:'Ночная тема', th_light:'Дневная тема',
+  back:'Назад', unsure_title:'Я не уверен(а) в диагнозе',
+  unsure_note:'Если вы замечаете особенности в развитии ребёнка, но диагноз ещё не установлен или есть сомнения в его точности.',
+  video_t:'Мини-ролик: что делать, если вы сомневаетесь в диагнозе', video_x:'Короткое видео с первыми шагами появится здесь. Пока можно изучить материалы ниже.',
+  a_forgot:'Забыли пароль?', a_rc_t:'Восстановление пароля', a_send:'Отправить код', a_change:'Сменить пароль',
+  a_sent:'Код отправлен на {contact}', a_code_msg:'Ваш код восстановления', a_code:'Код из сообщения', a_newpass:'Новый пароль',
+  a_wrong_code:'Неверный код', a_no_user:'Аккаунт с таким адресом не найден', a_pass_ok:'Пароль успешно изменён. Войдите с новым паролем.',
+  a_back_login:'← Назад ко входу', a_exists:'Такой аккаунт уже зарегистрирован', a_wrong:'Неверная почта/телефон или пароль',
+  sb_about:'О сайте', sb_srod:'Сообщество родителей особенных детей (СРОД)', sb_profile:'Аккаунт',
+  sp_about_t:'О сайте', sp_about_x:'Проект создан, чтобы родителям не приходилось искать информацию по десяткам разных источников после постановки ребёнку диагноза.', sp_about_ph:'Описание проекта, его целей и команды появится здесь.',
+  sp_srod_t:'Сообщество родителей особенных детей (СРОД)', sp_srod_x:'Место, где родители делятся опытом, поддерживают друг друга и обмениваются советами.', sp_srod_ph:'Содержимое раздела сообщества появится после наполнения.',
+  a_lg_t:'Вход в аккаунт', a_rg_t:'Регистрация', a_lg:'Вход', a_rg:'Регистрация', a_user:'Имя пользователя', a_user_ph:'Как к вам обращаться',
+  a_mail:'Электронная почта', a_tel:'Номер телефона', a_pass:'Пароль', a_sl:'Войти', a_sr:'Создать аккаунт',
+  a_pf:'Ваш профиль', a_out:'Выйти', a_guest:'Гость', a_c_mail:'почта', a_c_tel:'телефон',
+  a_err_mail:'Введите корректный адрес почты', a_err_tel:'Введите корректный номер телефона', a_err_pass:'Пароль должен быть не короче 4 символов', a_err_name:'Введите имя пользователя'
+},
+kz:{
+  landing_over:'Отбасыларға ақпараттық қолдау', landing_title:'Қажет диагнозды таңдаңыз', go:'Бөлімге өту',
+  welcome:'Қош келдіңіз', welcome_user:'Қош келдіңіз, {name}', crumb_home:'Басты бет', search_ph:'Сайттан іздеу…', no_res:'«{q}» сұрауы бойынша ештеңе табылмады',
+  help_t:'Көмек керек пе?', help_x:'Жауап таппадыңыз ба? Бізбен байланысыңыз — көмектесеміз.', help_b:'Байланыс →',
+  toc_title:'Мазмұны', toc:['Негізгі ақпарат','Кімнің құқығы бар','Қажетті құжаттар','Көмекті қалай алуға болады','Қайда жүгіну керек'],
+  a_lead:'{short} — «{name}» бағыты. Бөлім қадамдық мақала ретінде құрылған: жалпы ақпараттан нақты әрекеттерге дейін.',
+  a_s1:'Мұнда «{title}» бөлімінің «{name}» бағытына арналған негізгі сипаттамасы орналастырылады — қарапайым және тыныш тілмен, медициналық терминсіз.',
+  a_tip:'Пайдалы білу', a_tip_x:'Бөлімнің негізгі терминдері мен түсініктері осы блокта қысқаша түсіндіріледі.',
+  a_s2:'Мұнда осы бөлім бойынша көмекке үміттене алатын отбасылар мен балалар санаттарының тізбесі болады.',
+  a_imp:'Маңызды', a_imp_x:'Негізгі шарттар мен шектеулер осы блокқа шығады, өткізіп жіберу мүмкін емес.',
+  a_s3:'Құжаттардың шамамен тізбесі (сіздің материалдарыңызбен нақтыланады):',
+  docs:['Баланың туу туралы куәлігі','Диагноз қою туралы анықтама','Медициналық құжаттар (талап етілген жағдайда)'],
+  docs_note:'Түпнұсқа және көшірме',
+  a_steps:'Қадам сайын',
+  steps:[['Маманға жүгіну','Бастапқы консультация және жолдамалар.'],['Қажетті құжаттарды алу','Анықтамалар мен қорытындыларды жинау.'],['Өтініш беру','Қажетті мекемеге немесе онлайн.'],['Қажетті рәсімдерден өту','Комиссия, тексеру, сұхбат.'],['Шешім алу','Қорытынды құжат және келесі қадамдар.']],
+  a_s5:'Мұнда құжаттарды қабылдайтын және сұрақтарға жауап беретін мекемелердің байланыстары болады.',
+  a_ct:'Қайда жүгіну керек', a_ct_x:'Мекемелер мен телефон нөмірлерінің тізбесі бөлім материалдарымен толтырылғаннан кейін пайда болады.',
+  a_ph:'Осы мақаланың мазмұны сіз ұсынған материалдар бойынша толтырылады.',
+  art_h1:'Мақалалар', art_lead:'Ресми емес тақырыптар: өмір, эмоциялар, тұрмыс — нұсқауларда жазылмайтынның бәрі. «{name}» бағыты.',
+  topics:['Диагнозбен бірге өмір','Эмоциялар мен қолдау','Тұрмыс пен күн тәртібі','Мектеп пен балабақша','Отбасындағы қарым-қатынас','Демалыс және бос күндер'],
+  art_soon:'Мақала жақында шығады', art_read:'Оқу →', art_ph:'«{t}» тақырыбы бойынша жариялама осында шығады — жылы, қарапайым және адал.',
+  art_note:'Мақалалар сіздің материалдарыңыз бойынша қосылады.', dash_note:'Бұл бөлім сіздің бағытыңыз бойынша материалдармен толықтырылады.',
+  th_dark:'Түнгі режим', th_light:'Күндізгі режим',
+  back:'Артқа', unsure_title:'Диагнозға сенімсізбін',
+  unsure_note:'Егер баланың дамуындағы ерекшеліктерді байқасаңыз, бірақ диагноз әлі қойылмаған немесе оның дұрыстығына сенімсіз болсаңыз.',
+  video_t:'Мини-ролик: диагнозға сенімсіз болсаңыз не істеу керек', video_x:'Алғашқы қадамдар туралы қысқа бейне осында пайда болады. Әзірге төмендегі материалдарды оқи аласыз.',
+  a_forgot:'Құпия сөзді ұмыттыңыз ба?', a_rc_t:'Құпия сөзді қалпына келтіру', a_send:'Код жіберу', a_change:'Құпия сөзді өзгерту',
+  a_sent:'Код {contact} адресіне жіберілді', a_code_msg:'Қалпына келтіру кодыңыз', a_code:'Хабарламадағы код', a_newpass:'Жаңа құпия сөз',
+  a_wrong_code:'Қате код', a_no_user:'Мұндай мекенжайы бар аккаунт табылмады', a_pass_ok:'Құпия сөз сәтті өзгерді. Жаңа құпия сөзбен кіріңіз.',
+  a_back_login:'← Кіруге оралу', a_exists:'Мұндай аккаунт тіркелген', a_wrong:'Пошта/телефон немесе құпия сөз қате',
+  sb_about:'Сайт туралы', sb_srod:'Ерекше балалардың ата-аналары қауымдастығы (СРОД)', sb_profile:'Аккаунт',
+  sp_about_t:'Сайт туралы', sp_about_x:'Балаға диагноз қойылғаннан кейін ата-аналарға ақпаратты ондаған дереккөзден іздеудің қажеті жоқ деп жоба құрылды.', sp_about_ph:'Жобаның сипаттамасы, мақсаттары және командасы осында пайда болады.',
+  sp_srod_t:'Ерекше балалардың ата-аналары қауымдастығы (СРОД)', sp_srod_x:'Ата-аналар тәжірибесімен бөлісетін, бір-бірін қолдайтын және кеңес алмасатын орын.', sp_srod_ph:'Қауымдастық бөлімінің мазмұны толтырылғаннан кейін пайда болады.',
+  a_lg_t:'Аккаунтқа кіру', a_rg_t:'Тіркелу', a_lg:'Кіру', a_rg:'Тіркелу', a_user:'Пайдаланушы аты', a_user_ph:'Сізге қалай жүгінейік',
+  a_mail:'Электрондық пошта', a_tel:'Телефон нөмірі', a_pass:'Құпия сөз', a_sl:'Кіру', a_sr:'Аккаунт құру',
+  a_pf:'Сіздің профиліңіз', a_out:'Шығу', a_guest:'Қонақ', a_c_mail:'пошта', a_c_tel:'телефон',
+  a_err_mail:'Дұрыс пошта мекенжайын енгізіңіз', a_err_tel:'Дұрыс телефон нөмірін енгізіңіз', a_err_pass:'Құпия сөз кемінде 4 таңбадан тұруы керек', a_err_name:'Пайдаланушы атын енгізіңіз'
+},
+en:{
+  landing_over:'Informational support for families', landing_title:'Choose the diagnosis', go:'Go to section',
+  welcome:'Welcome', welcome_user:'Welcome, {name}', crumb_home:'Home', search_ph:'Search the site…', no_res:'Nothing found for "{q}"',
+  help_t:'Need help?', help_x:'Didn\'t find an answer? Contact us — we will help.', help_b:'Contacts →',
+  toc_title:'Contents', toc:['Key information','Who is eligible','Required documents','How to get help','Where to apply'],
+  a_lead:'{short} — the "{name}" track. This page is a step-by-step article: from general information to specific actions.',
+  a_s1:'This is where the main overview of "{title}" for the "{name}" track will be placed — in plain, calm language, without medical jargon.',
+  a_tip:'Good to know', a_tip_x:'Key terms and concepts of this section will be briefly explained in this block.',
+  a_s2:'This is where the list of families and children eligible for help under this section will appear.',
+  a_imp:'Important', a_imp_x:'Key conditions and restrictions will be highlighted in this block so they are hard to miss.',
+  a_s3:'Approximate list of documents (to be refined with your materials):',
+  docs:['Child\'s birth certificate','Certificate of diagnosis','Medical documents (if required)'],
+  docs_note:'Original and copy',
+  a_steps:'Step by step',
+  steps:[['Contact a specialist','Initial consultation and referrals.'],['Obtain the required documents','Collecting certificates and reports.'],['Submit an application','To the relevant organization or online.'],['Complete the required procedures','Commission, examination, interview.'],['Receive the decision','Final document and next steps.']],
+  a_s5:'This is where contacts of organizations that accept documents and answer questions about this section will appear.',
+  a_ct:'Where to apply', a_ct_x:'A list of institutions and phone numbers will appear after the section is filled with materials.',
+  a_ph:'The content of this article will be filled in according to the materials you provide.',
+  art_h1:'Articles', art_lead:'Less formal topics: life, emotions, everyday matters — everything instructions don\'t cover. "{name}" track.',
+  topics:['Life with the diagnosis','Emotions and support','Daily life and routine','School and kindergarten','Family relationships','Rest and weekends'],
+  art_soon:'Article coming soon', art_read:'Read →', art_ph:'A piece on "{t}" will be published here — warm, simple and honest.',
+  art_note:'Articles will be added based on your materials.', dash_note:'This section will be supplemented with materials for your track.',
+  th_dark:'Night mode', th_light:'Day mode',
+  back:'Back', unsure_title:'I’m unsure about the diagnosis',
+  unsure_note:'If you notice particularities in your child’s development, but no diagnosis has been made yet or you doubt its accuracy.',
+  video_t:'Mini video: what to do if you doubt the diagnosis', video_x:'A short video with the first steps will appear here. For now, explore the materials below.',
+  a_forgot:'Forgot password?', a_rc_t:'Password recovery', a_send:'Send code', a_change:'Change password',
+  a_sent:'Code sent to {contact}', a_code_msg:'Your recovery code', a_code:'Code from the message', a_newpass:'New password',
+  a_wrong_code:'Wrong code', a_no_user:'No account found for this address', a_pass_ok:'Password changed successfully. Sign in with your new password.',
+  a_back_login:'← Back to sign in', a_exists:'This account is already registered', a_wrong:'Wrong email/phone or password',
+  sb_about:'About the site', sb_srod:'Community of parents of special children (SROD)', sb_profile:'Account',
+  sp_about_t:'About the site', sp_about_x:'The project was created so parents don’t have to search dozens of sources for information after their child is diagnosed.', sp_about_ph:'A description of the project, its goals and team will appear here.',
+  sp_srod_t:'Community of parents of special children (SROD)', sp_srod_x:'A place where parents share experience, support each other and exchange advice.', sp_srod_ph:'The community section will appear once it is filled.',
+  a_lg_t:'Sign in', a_rg_t:'Sign up', a_lg:'Sign in', a_rg:'Sign up', a_user:'Username', a_user_ph:'What should we call you',
+  a_mail:'Email address', a_tel:'Phone number', a_pass:'Password', a_sl:'Sign in', a_sr:'Create account',
+  a_pf:'Your profile', a_out:'Log out', a_guest:'Guest', a_c_mail:'email', a_c_tel:'phone',
+  a_err_mail:'Enter a valid email address', a_err_tel:'Enter a valid phone number', a_err_pass:'Password must be at least 4 characters', a_err_name:'Enter a username'
+}
+};
+function tr(k){ return T[lang][k]; }
+function trF(k, map){ let s = tr(k); for(const m in map) s = s.replace('{'+m+'}', map[m]); return s; }
+/* Каркас статьи: разделы и блоки. Контент — заглушки под будущие материалы. */
+const ARTICLE_TOC = [
+  {id:'s1', title:'Основная информация'},
+  {id:'s2', title:'Кто имеет право'},
+  {id:'s3', title:'Необходимые документы'},
+  {id:'s4', title:'Как получить помощь'},
+  {id:'s5', title:'Куда обращаться'}
+];
+</script>
+<script>
+/* ===================== СОСТОЯНИЕ / УТИЛИТЫ ===================== */
+const state = { dir:null, page:'home' };
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+
+const SUN_SVG = `<svg width="23" height="23" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.6" fill="currentColor" stroke="currentColor" stroke-width="1.6"/><g stroke="currentColor" stroke-width="2.3"><path d="M12 2.2v2.6M12 19.2v2.6M2.2 12h2.6M19.2 12h2.6M4.6 4.6l1.9 1.9M17.5 17.5l1.9 1.9M19.4 4.6l-1.9 1.9M6.5 17.5l-1.9 1.9"/></g></svg>`;
+const MOON_SVG = `<svg width="23" height="23" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.2A8.8 8.8 0 0 1 9.8 3.5a8.8 8.8 0 1 0 10.7 10.7z" fill="currentColor" stroke="currentColor" stroke-width="1.6"/><path d="M17.6 3.6l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7z" fill="currentColor" stroke="none"/></svg>`;
+function getTheme(){ return localStorage.getItem('nd-theme') || 'light'; }
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('nd-theme', t);
+  $('#themeBtn').innerHTML = t === 'light' ? MOON_SVG : SUN_SVG;
+  $('#themeBtn').title = t === 'light' ? tr('th_dark') : tr('th_light');
+}
+applyTheme(getTheme());
+
+/* ===================== SIDEBAR ===================== */
+const sidebar = $('#sidebar'), hamburger = $('#hamburger'), overlay = $('#overlay');
+function buildSidebar(){
+  $('#sideNav').innerHTML =
+    `<a href="#/about-site" data-sec="about-site">${ICONS.info}<span>${tr('sb_about')}</span></a>
+     <a href="#/srod" data-sec="srod">${ICONS.story}<span>${tr('sb_srod')}</span></a>
+     <a href="#/${state.dir || 'ras'}/saved" data-sec="saved">${ICONS.doc}<span>${state.dir === 'dcp' ? tr('sb_saved_stories') : tr('sb_saved_articles')}</span></a>
+     <a href="#" data-sec="profile">${ICONS.user}<span>${tr('sb_profile')}</span></a>` +
+    (typeof isAdmin === 'function' && isAdmin()
+      ? `<a href="#/admin" data-sec="admin">${ICONS.folder}<span>${tr('adm')}</span></a>` : '');
+}
+function toggleSidebar(force){
+  const open = force !== undefined ? force : !sidebar.classList.contains('open');
+  sidebar.classList.toggle('open', open);
+  hamburger.classList.toggle('open', open);
+  overlay.classList.toggle('show', open && innerWidth <= 900);
+}
+hamburger.addEventListener('click', () => toggleSidebar());
+overlay.addEventListener('click', () => toggleSidebar(false));
+
+/* ===================== РОУТЕР ===================== */
+let prevDir = null;
+function route(){
+  const h = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  const pageHome = $('#page-home'), pageSection = $('#page-section');
+  const chrome = $('#topbar').style;
+  $$('.search-wrap').forEach(x => x.classList.remove('open'));
+  if(h.length === 0){
+    state.dir = null; state.page = 'home'; prevDir = null;
+    chrome.display = 'none'; sidebar.style.display = 'none';
+    pageHome.classList.add('active'); pageSection.classList.remove('active');
+    return;
+  }
+  /* Админка: модерация публикаций */
+  if(h[0] === 'admin'){
+    state.page = 'admin';
+    chrome.display = ''; sidebar.style.display = '';
+    pageHome.classList.remove('active'); pageSection.classList.add('active');
+    buildSidebar();
+    $$('#sideNav a').forEach(a => a.classList.toggle('active', a.dataset.sec === 'admin'));
+    pageSection.innerHTML = renderAdminPage();
+    toggleSidebar(false);
+    window.scrollTo({top:0});
+    return;
+  }
+  /* Общие страницы сайта: «О сайте» и «СРОД» */
+  if(h[0] === 'about-site' || h[0] === 'srod'){
+    state.page = h[0];
+    chrome.display = ''; sidebar.style.display = '';
+    pageHome.classList.remove('active'); pageSection.classList.add('active');
+    buildSidebar();
+    $$('#sideNav a').forEach(a => a.classList.toggle('active', a.dataset.sec === state.page));
+    renderSpecial(h[0]);
+    toggleSidebar(false);
+    window.scrollTo({top:0});
+    return;
+  }
+  state.dir = DIRS[h[0]] ? h[0] : 'ras';
+  if(h[1] === 'post' && h[2]){ state.page = 'post'; state.postId = h[2]; }
+  else if(h[1] === 'topic' && h[2] !== undefined){ state.page = 'topic'; state.topicIdx = h[2]; }
+  else if(h[1] === 'saved'){ state.page = 'saved'; }
+  else state.page = sectionsFor(state.dir).some(s => s.id === h[1]) ? h[1] : 'home';
+  chrome.display = ''; sidebar.style.display = '';
+  pageHome.classList.remove('active'); pageSection.classList.add('active');
+  $$('#dirSwitch button').forEach(b => b.classList.toggle('active', b.dataset.dir === state.dir));
+  buildSidebar();
+  $$('#sideNav a').forEach(a => a.classList.toggle('active', a.dataset.sec === state.page));
+  renderSection(pageSection);
+  toggleSidebar(false);
+  window.scrollTo({top:0});
+  localStorage.setItem('nd-last-dir', state.dir);
+  /* Полноэкранное видео при входе в «unsure» (без опции пересмотра) */
+  if(state.dir === 'unsure' && state.page === 'home' && prevDir !== 'unsure') showVideo();
+  prevDir = state.dir;
+}
+window.addEventListener('hashchange', route);
+
+/* ===================== РЕНДЕР РАЗДЕЛОВ ===================== */
+function crumb(cur){
+  const code = state.dir === 'unsure' ? '<b style="color:#151515">?</b>' : DIRS[state.dir].code;
+  return `<div class="breadcrumb"><a href="#/">${tr('crumb_home')}</a><span class="sep">→</span><a href="#/${state.dir}/home">${code}</a><span class="sep">→</span><span>${cur}</span></div>`;
+}
+function placeholder(txt){
+  return `<div class="placeholder-note">📋 ${txt}</div>`;
+}
+function renderSection(root){
+  const d = DIRS[state.dir], s = sectionsFor(state.dir).find(x => x.id === state.page);
+  let html = '';
+  if(state.page === 'home') html = renderDashboard(d);
+  else if(state.page === 'articles') html = renderArticles(d, s);
+  else if(state.page === 'post') html = renderPostPage(d);
+  else if(state.page === 'topic') html = renderTopicPage(d);
+  else if(state.page === 'saved') html = renderSavedPage(d);
+  else html = renderArticle(d, s);
+  root.innerHTML = html;
+  if(state.page !== 'home' && state.page !== 'articles') bindScrollSpy();
+}
+/* Общие страницы: «О сайте» и «СРОД» */
+function renderSpecial(page){
+  const isAbout = page === 'about-site';
+  const title = tr(isAbout ? 'sp_about_t' : 'sp_srod_t');
+  $('#page-section').innerHTML = `
+    <button class="back-btn" data-back>← ${tr('back')}</button>
+    <div class="article-head">
+      <div class="breadcrumb"><a href="#/">${tr('crumb_home')}</a><span class="sep">→</span><span>${title}</span></div>
+      <h1>${title}</h1>
+      <p class="lead">${tr(isAbout ? 'sp_about_x' : 'sp_srod_x')}</p>
+    </div>
+    ${placeholder(tr(isAbout ? 'sp_about_ph' : 'sp_srod_ph'))}`;
+}
+/* Полноэкранное видео (направление «unsure») */
+function showVideo(){
+  $('#videoTitle').textContent = tr('video_t');
+  $('#videoNote').textContent = tr('video_x');
+  $('#videoOverlay').classList.add('show');
+}
+function renderDashboard(d){
+  const mini = tr('topics').slice(0, 4).map((t, i) => `
+    <div class="art-card" data-topic="${i}">
+      <div class="art-cover"><span>${t.split(' ')[0]}</span></div>
+      <div class="art-body">
+        <span class="art-tag">${t}</span>
+        <h3>${tr('art_soon')}</h3>
+      </div>
+    </div>`).join('');
+  const cards = sectionsFor(state.dir).filter(s => s.id !== 'home').map((s,i) => {
+    const body = s.id === 'articles'
+      ? `<div class="carousel-wrap"><div class="art-carousel mini">${mini}</div></div>`
+      : `<p>${shortOf(s)}</p>`;
+    return `<div class="cat-card" data-goto="${s.id}">
+      <h3>${titleOf(s, state.dir)}</h3>
+      ${body}
+      <span class="arrow">→</span>
+    </div>`;
+  }).join('');
+  const video = state.dir === 'unsure' ? `
+    <div class="video-card">
+      <div class="video-thumb" title="${tr('video_t')}"><span class="play">▶</span></div>
+      <div class="video-info"><b>${tr('video_t')}</b><p>${tr('video_x')}</p></div>
+    </div>` : '';
+  const u = getUser();
+  const welcome = u ? trF('welcome_user', {name: u.name}) : tr('welcome');
+  return `${crumb(tr('crumb_home'))}
+    <div class="dash-head">
+      <h1>${welcome}</h1>
+      <p>${d.welcome[lang]}</p>
+    </div>
+    ${video}
+    <div class="cards-grid">${cards}</div>`;
+}
+</script>
+
+<script>
+/* ===================== СТАТЬЯ ===================== */
+function renderArticle(d, s){
+  const tocTitles = tr('toc');
+  const toc = ARTICLE_TOC.map((t,i) =>
+    `<a href="#${t.id}" data-toc="${t.id}"><span class="num">0${i+1}</span>${tocTitles[i]}</a>`).join('');
+  const docs = tr('docs')
+    .map(x => `<div class="doc-chip"><div class="d-ico">${ICONS.doc}</div><div><b>${x}</b><small>${tr('docs_note')}</small></div></div>`).join('');
+  const steps = tr('steps').map((st,i) =>
+    `<div class="step-row"><div class="s-num">${i+1}</div><div><p>${st[0]}</p><small>${st[1]}</small></div></div>`).join('');
+  const t = titleOf(s, state.dir);
+  const nm = d.name[lang];
+  const body = `
+    <button class="back-btn" data-back>← ${tr('back')}</button>
+    <div class="article-head">
+      ${crumb(t)}
+      <h1>${t}</h1>
+      <p class="lead">${trF('a_lead', {short: shortOf(s), name: nm})}</p>
+    </div>
+    <div class="article-layout">
+      <aside class="toc"><b>${tr('toc_title')}</b>${toc}</aside>
+      <div class="article-body">
+        <h2 id="s1"><span class="h-num">01</span>${tocTitles[0]}</h2>
+        <p>${trF('a_s1', {title: t, name: nm})}</p>
+        <div class="block tip"><div class="b-title">💡 ${tr('a_tip')}</div><p>${tr('a_tip_x')}</p></div>
+
+        <h2 id="s2"><span class="h-num">02</span>${tocTitles[1]}</h2>
+        <p>${tr('a_s2')}</p>
+        <div class="block important"><div class="b-title">⭐ ${tr('a_imp')}</div><p>${tr('a_imp_x')}</p></div>
+
+        <h2 id="s3"><span class="h-num">03</span>${tocTitles[2]}</h2>
+        <p>${tr('a_s3')}</p>
+        ${docs}
+
+        <h2 id="s4"><span class="h-num">04</span>${tocTitles[3]}</h2>
+        <div class="block steps"><div class="b-title">🪜 ${tr('a_steps')}</div>${steps}</div>
+
+        <h2 id="s5"><span class="h-num">05</span>${tocTitles[4]}</h2>
+        <p>${tr('a_s5')}</p>
+        <div class="block tip"><div class="b-title">📞 ${tr('a_ct')}</div><p>${tr('a_ct_x')}</p></div>
+        ${placeholder(tr('a_ph'))}
+        ${interactionBlock('sec-' + state.dir + '-' + s.id)}
+      </div>
+    </div>`;
+  return body;
+}
+function bindScrollSpy(){
+  const links = $$('[data-toc]');
+  if(!links.length) return;
+  const secs = links.map(l => document.getElementById(l.dataset.toc)).filter(Boolean);
+  links.forEach(l => l.addEventListener('click', e => {
+    e.preventDefault();
+    const t = document.getElementById(l.dataset.toc);
+    if(t) t.scrollIntoView({behavior:'smooth'});
+  }));
+  const onScroll = () => {
+    let cur = secs[0];
+    secs.forEach(s => { if(s.getBoundingClientRect().top < 130) cur = s; });
+    links.forEach(l => l.classList.toggle('active', l.dataset.toc === (cur && cur.id)));
+  };
+  window.removeEventListener('scroll', onScroll);
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+}
+
+/* ===================== СТАТЬИ ===================== */
+function renderArticles(d, s){
+  const topics = tr('topics');
+  const cards = topics.map((t, i) => `
+    <div class="art-card" data-topic="${i}">
+      <div class="art-cover"><span>${t.split(' ')[0]}</span></div>
+      <div class="art-body">
+        <span class="art-tag">${t}</span>
+        <h3>${tr('art_soon')}</h3>
+        <p>${trF('art_ph', {t: t.toLowerCase()})}</p>
+        <span class="art-go">${tr('art_read')}</span>
+      </div>
+    </div>`).join('');
+  const me = getUser();
+  const posts = getPosts().filter(p => p.dir === state.dir &&
+    (p.status === 'published' || (me && p.author === me.name && p.status === 'pending')));
+  const postCards = posts.slice().reverse().map(p => `
+    <div class="art-card" data-post="${p.id}">
+      <div class="art-cover"><span>${esc(String(p.topic || '✦').split(' ')[0])}</span></div>
+      <div class="art-body">
+        <span class="art-tag">${esc(p.topic || '')}</span>
+        <h3>${esc(p.title)}</h3>
+        <p>${esc(p.text).slice(0, 90)}${p.text.length > 90 ? '…' : ''}</p>
+        ${p.status === 'pending' ? `<span class="status pending">${tr('st_pending')}</span>` : ''}
+        <span class="art-go">${tr('art_read')}</span>
+      </div>
+    </div>`).join('');
+  const shareBtn = `<div style="margin-top:30px"><button class="btn" data-share-open>${state.dir === 'dcp' ? tr('share_story') : tr('share_article')} →</button></div>`;
+  return `${crumb(titleOf(s, state.dir))}
+    <button class="back-btn" data-back>← ${tr('back')}</button>
+    <div class="dash-head"><h1>${titleOf(s, state.dir)}</h1><p>${shortOf(s)}</p></div>
+    <div class="articles-grid">${cards}</div>
+    <div class="dash-head" style="margin-top:40px"><h2 style="font-size:22px">${tr('community')}</h2></div>
+    ${postCards ? `<div class="articles-grid">${postCards}</div>` : `<div class="placeholder-note">${tr('no_posts')}</div>`}
+    ${shareBtn}`;
+}
+
+/* ===================== ПОИСК ===================== */
+const searchInput = $('#searchInput'), searchResults = $('#searchResults');
+function buildIndex(){
+  const idx = [];
+  Object.keys(DIRS).forEach(dir => {
+    idx.push({dir, page:'home', sec:null});
+    sectionsFor(dir).filter(x => x.id !== 'home').forEach(x => idx.push({dir, page:x.id, sec:x}));
+  });
+  return idx;
+}
+const searchIndex = buildIndex();
+function homeDesc(){ return lang === 'kz' ? 'Бағыттың басты беті' : lang === 'en' ? 'Track home page' : 'Главная страница направления'; }
+function doSearch(q){
+  q = q.trim().toLowerCase();
+  if(!q){ searchResults.classList.remove('show'); return; }
+  const hits = searchIndex.filter(i => {
+    const keys = i.sec ? `${i.sec.keywords.ru} ${i.sec.keywords.kz} ${i.sec.keywords.en}` : DIRS[i.dir].keys;
+    const title = i.sec ? titleOf(i.sec, i.dir) : `${DIRS[i.dir].code} — ${DIRS[i.dir].name[lang]}`;
+    const desc = i.sec ? shortOf(i.sec) : homeDesc();
+    i._title = title; i._desc = desc;
+    return (title + ' ' + desc + ' ' + keys).toLowerCase().includes(q);
+  }).slice(0, 12);
+  searchResults.innerHTML = hits.length
+    ? hits.map(h => `<div class="sr-item" data-href="#/${h.dir}/${h.page}">
+        <span class="sr-tag">${DIRS[h.dir].code}</span>
+        <div><div class="sr-title">${h._title}</div><div class="sr-desc">${h._desc}</div></div>
+      </div>`).join('')
+    : `<div class="sr-empty">${trF('no_res', {q})}</div>`;
+  searchResults.classList.add('show');
+  $$('.sr-item').forEach(el => el.addEventListener('click', () => {
+    location.hash = el.dataset.href;
+    searchResults.classList.remove('show');
+    searchInput.value = '';
+  }));
+}
+searchInput.addEventListener('input', e => doSearch(e.target.value));
+searchInput.addEventListener('focus', e => doSearch(e.target.value));
+document.addEventListener('click', e => {
+  if(!e.target.closest('.search-wrap')) searchResults.classList.remove('show');
+});
+
+/* ===================== ЯЗЫК: ВЫПАДАЮЩЕЕ МЕНЮ ===================== */
+const LANG_NAME = {ru:'Русский', kz:'Қазақша', en:'English'};
+function buildLangMenu(root){
+  root.innerHTML = LANGS.map(l =>
+    `<button data-lang="${l}" class="${l === lang ? 'active' : ''}"><span>${LANG_NAME[l]}</span><span class="check">✓</span></button>`).join('');
+}
+function updateStaticTexts(){
+  $('#landingOver').textContent = tr('landing_over');
+  $('#landingTitle').textContent = tr('landing_title');
+  $$('.diag-card').forEach(c => {
+    c.querySelector('.diag-name').textContent = DIRS[c.dataset.dir].name[lang];
+    c.querySelector('.diag-go').firstChild.textContent = tr('go') + ' ';
+    const note = c.querySelector('.diag-note');
+    if(note) note.textContent = tr('unsure_note');
+  });
+  $('#searchInput').placeholder = tr('search_ph');
+  $('#dirUnsure').title = tr('unsure_title');
+}
+function setLang(l){
+  if(!LANGS.includes(l)) return;
+  lang = l;
+  localStorage.setItem('nd-lang', l);
+  document.documentElement.lang = l;
+  buildLangMenu($('#langMenuLanding'));
+  buildLangMenu($('#langMenuTop'));
+  updateStaticTexts();
+  route();
+  applyTheme(getTheme());
+}
+document.addEventListener('click', e => {
+  const tgl = e.target.closest('[data-lang-toggle]');
+  if(tgl){
+    const menu = tgl.parentElement.querySelector('.lang-menu');
+    $$('.lang-menu').forEach(m => { if(m !== menu) m.classList.remove('show'); });
+    menu.classList.toggle('show');
+    return;
+  }
+  const b = e.target.closest('.lang-menu button[data-lang]');
+  if(b){ setLang(b.dataset.lang); $$('.lang-menu').forEach(m => m.classList.remove('show')); return; }
+  if(!e.target.closest('.lang-menu')) $$('.lang-menu').forEach(m => m.classList.remove('show'));
+});
+
+/* ===================== ТЕМА / НАПРАВЛЕНИЕ / ЛЕНДИНГ ===================== */
+$('#themeBtn').addEventListener('click', () =>
+  applyTheme(getTheme() === 'light' ? 'dark' : 'light'));
+$('#dirSwitch').addEventListener('click', e => {
+  const b = e.target.closest('button[data-dir]');
+  if(!b || !state.dir) return;
+  location.hash = `#/${b.dataset.dir}/${state.page}`;
+});
+$$('.diag-card').forEach(c => c.addEventListener('click', () => {
+  location.hash = `#/${c.dataset.dir}/home`;
+}));
+
+/* Явная навигация по sidebar (гарантированно работает в любом окружении) */
+$('#sideNav').addEventListener('click', e => {
+  const a = e.target.closest('a[data-sec]');
+  if(!a) return;
+  e.preventDefault();
+  if(a.dataset.sec === 'profile'){ toggleSidebar(false); openAuth(); return; }
+  location.hash = a.getAttribute('href');
+  toggleSidebar(false);
+});
+
+/* ===================== АККАУНТ: ВХОД / РЕГИСТРАЦИЯ ===================== */
+const authOverlay = $('#authOverlay');
+let authMode = 'login';   // login | register | recover | verify
+let contactMode = 'email'; // email | phone
+let pendingAuth = null;   // данные 1-го шага, ожидающие кода подтверждения
+
+/* --- «База данных» аккаунтов (localStorage) --- */
+function getUsers(){ try { return JSON.parse(localStorage.getItem('nd-users')) || []; } catch(e){ return []; } }
+function saveUsers(u){ localStorage.setItem('nd-users', JSON.stringify(u)); }
+function findUser(contact){ return getUsers().find(u => u.contact === contact) || null; }
+/* Текущая сессия */
+function getUser(){ try { return JSON.parse(localStorage.getItem('nd-user')); } catch(e){ return null; } }
+function saveUser(u){ localStorage.setItem('nd-user', JSON.stringify(u)); }
+function clearUser(){ localStorage.removeItem('nd-user'); }
+let recoverStage = 1, recoverCode = '', recoverContact = '';
+
+function updateAccountUI(){
+  const u = getUser();
+  const btn = $('#accountBtn');
+  btn.classList.toggle('logged', !!u);
+  btn.title = u ? u.name : 'Аккаунт';
+  if($('#sideNav')) buildSidebar(); /* обновить ссылку «Модерация» для админа */
+}
+updateAccountUI();
+
+function setAuthMode(mode){
+  authMode = mode;
+  $$('.auth-tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === mode));
+  const err = $('#authError');
+  err.textContent = '';
+  err.classList.remove('ok');
+  $('#authTitle').textContent = tr(mode === 'login' ? 'a_lg_t' : mode === 'register' ? 'a_rg_t' : mode === 'recover' ? 'a_rc_t' : 'a_verify_t');
+  $('#userField').style.display = mode === 'register' ? '' : 'none';
+  $('#passField').style.display = (mode === 'login' || mode === 'register') ? '' : 'none';
+  $('#codeField').style.display = (mode === 'recover' && recoverStage === 2) || mode === 'verify' ? '' : 'none';
+  $('#newPassField').style.display = (mode === 'recover' && recoverStage === 2) ? '' : 'none';
+  $('#forgotBtn').textContent = mode === 'recover' ? tr('a_back_login') : mode === 'verify' ? tr('a_back_login') : tr('a_forgot');
+  $('#forgotBtn').style.display = mode === 'register' ? 'none' : '';
+  $('#lblCode').textContent = tr('a_code');
+  $('#lblNewPass').textContent = tr('a_newpass');
+  $('#authSubmit').textContent = mode === 'login' ? tr('a_sl') : mode === 'register' ? tr('a_sr') : mode === 'recover' ? (recoverStage === 1 ? tr('a_send') : tr('a_change')) : tr('a_verify');
+  $('#lblUser').textContent = tr('a_user');
+  $('#authUser').placeholder = tr('a_user_ph');
+  $('#lblPass').textContent = tr('a_pass');
+  $('#pfTitle').textContent = tr('a_pf');
+  $('#logoutBtn').textContent = tr('a_out');
+  $$('.auth-tabs').forEach(t => t.style.display = mode === 'verify' ? 'none' : '');
+  $$('.auth-tabs button').forEach(b => b.textContent = tr(b.dataset.tab === 'login' ? 'a_lg' : 'a_rg'));
+}
+function setContactMode(mode){
+  contactMode = mode;
+  $('#contactToggle').textContent = tr(mode === 'email' ? 'a_c_mail' : 'a_c_tel');
+  $('#authContactLabel').textContent = tr(mode === 'email' ? 'a_mail' : 'a_tel');
+  const inp = $('#authContact');
+  inp.type = mode === 'email' ? 'email' : 'tel';
+  inp.placeholder = mode === 'email' ? 'example@gmail.com' : '777 123 45 67';
+  const cs = $('#countrySelect');
+  if(cs) cs.style.display = mode === 'phone' ? '' : 'none';
+}
+function openAuth(){
+  const u = getUser();
+  if(u){
+    $('#authFormWrap').style.display = 'none';
+    $('#authProfileWrap').style.display = '';
+    $('#pfAvatar').textContent = (u.name || 'Г')[0].toUpperCase();
+    $('#pfName').textContent = u.name;
+    $('#pfContact').textContent = u.contact;
+  } else {
+    $('#authFormWrap').style.display = '';
+    $('#authProfileWrap').style.display = 'none';
+    recoverStage = 1;
+    pendingAuth = null;
+    $('#msgBox').style.display = 'none';
+    $('#authError').classList.remove('ok');
+    setAuthMode('login');
+    setContactMode('email');
+    $('#authForm').reset();
+  }
+  authOverlay.classList.add('show');
+}
+function closeAuth(){ authOverlay.classList.remove('show'); }
+
+$('#accountBtn').addEventListener('click', openAuth);
+$('#authClose').addEventListener('click', closeAuth);
+authOverlay.addEventListener('click', e => { if(e.target === authOverlay) closeAuth(); });
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeAuth(); });
+$$('.auth-tabs button').forEach(b => b.addEventListener('click', () => setAuthMode(b.dataset.tab)));
+$('#contactToggle').addEventListener('click', () =>
+  setContactMode(contactMode === 'email' ? 'phone' : 'email'));
+
+$('#authForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const err = $('#authError');
+  err.classList.remove('ok');
+  const rawContact = $('#authContact').value.trim();
+  const contact = contactMode === 'phone'
+    ? ($('#countrySelect').value + ' ' + rawContact).trim()
+    : rawContact;
+  const pass = $('#authPass').value;
+  const name = $('#authUser').value.trim();
+  if(contactMode === 'email' && !/^\S+@\S+\.\S+$/.test(contact)){ err.textContent = tr('a_err_mail'); return; }
+  if(contactMode === 'phone' && !/^\+\d{1,4}[\d\s()\-]{9,}$/.test(contact)){ err.textContent = tr('a_err_tel'); return; }
+
+  /* --- Шаг 2: ввод кода подтверждения (вход и регистрация) --- */
+  if(authMode === 'verify'){
+    if(!pendingAuth){ setAuthMode('login'); return; }
+    if($('#authCode').value.trim() !== pendingAuth.code){ err.textContent = tr('a_wrong_code'); return; }
+    const pa = pendingAuth;
+    if(pa.mode === 'register'){
+      const users = getUsers();
+      const role = pa.contact === ADMIN_CONTACT ? 'admin' : 'user';
+      users.push({ name: pa.name, contact: pa.contact, contactMode: pa.contactMode, pass: pa.pass, role });
+      saveUsers(users);
+    }
+    const dbUser = findUser(pa.contact);
+    saveUser({ name: dbUser.name, contact: dbUser.contact, contactMode: dbUser.contactMode, role: dbUser.role });
+    pendingAuth = null;
+    $('#msgBox').style.display = 'none';
+    err.textContent = '';
+    updateAccountUI();
+    closeAuth();
+    if(!state.dir) location.hash = '#/' + (localStorage.getItem('nd-last-dir') || 'ras') + '/home';
+    route();
+    return;
+  }
+
+  /* --- Восстановление пароля --- */
+  if(authMode === 'recover'){
+    if(recoverStage === 1){
+      const u = findUser(contact);
+      if(!u){ err.textContent = tr('a_no_user'); return; }
+      recoverContact = contact;
+      recoverCode = String(Math.floor(100000 + Math.random() * 900000));
+      $('#msgBox').innerHTML = `💬 <b>${trF('a_sent', {contact})}</b><br>${tr('a_code_msg')}: <b style="font-size:17px;letter-spacing:.12em">${recoverCode}</b>`;
+      recoverStage = 2;
+      setAuthMode('recover');
+      $('#msgBox').style.display = '';
+    } else {
+      if($('#authCode').value.trim() !== recoverCode){ err.textContent = tr('a_wrong_code'); return; }
+      const np = $('#authNewPass').value;
+      if(np.length < 4){ err.textContent = tr('a_err_pass'); return; }
+      const users = getUsers();
+      const u = users.find(x => x.contact === recoverContact);
+      if(u){ u.pass = np; saveUsers(users); }
+      recoverStage = 1;
+      $('#msgBox').style.display = 'none';
+      $('#authPass').value = np;
+      setAuthMode('login');
+      err.classList.add('ok');
+      err.textContent = tr('a_pass_ok');
+    }
+    return;
+  }
+
+  if(pass.length < 4){ err.textContent = tr('a_err_pass'); return; }
+  if(authMode === 'register'){
+    if(name.length < 2){ err.textContent = tr('a_err_name'); return; }
+    if(findUser(contact)){ err.textContent = tr('a_exists'); return; }
+  } else {
+    const u = findUser(contact);
+    if(!u || u.pass !== pass){ err.textContent = tr('a_wrong'); return; }
+  }
+  /* Код подтверждения: демо на экране + реальное письмо при настроенном EmailJS */
+  pendingAuth = { mode: authMode, name, contact, pass, contactMode,
+    code: String(Math.floor(100000 + Math.random() * 900000)) };
+  setAuthMode('verify');
+  deliverCode(contact, pendingAuth.code, contactMode === 'phone');
+});
+$('#forgotBtn').addEventListener('click', () => {
+  if(authMode === 'verify' && pendingAuth){
+    $('#msgBox').style.display = 'none';
+    setAuthMode(pendingAuth.mode);
+    return;
+  }
+  recoverStage = 1;
+  $('#msgBox').style.display = 'none';
+  setAuthMode(authMode === 'recover' ? 'login' : 'recover');
+});
+$('#logoutBtn').addEventListener('click', () => {
+  clearUser();
+  updateAccountUI();
+  closeAuth();
+  route(); /* обновить текущую страницу: скрыть личные данные */
+});
+/* Кнопка «назад» — на главную страницу текущего направления */
+document.addEventListener('click', e => {
+  if(e.target.closest('[data-back]')) location.hash = `#/${state.dir}/home`;
+});
+/* Поиск на телефоне: значок лупы разворачивает поле */
+document.addEventListener('click', e => {
+  const st = e.target.closest('[data-search-toggle]');
+  if(st){
+    const wEl = st.closest('.search-wrap');
+    wEl.classList.toggle('open');
+    if(wEl.classList.contains('open')) $('#searchInput').focus();
+    return;
+  }
+  if(!e.target.closest('.search-wrap')) $$('.search-wrap').forEach(x => x.classList.remove('open'));
+});
+
+/* Клики по карточкам dashboard (делегирование) */
+$('#page-section').addEventListener('click', e => {
+  if(e.target.closest('[data-carousel-next]')) return; /* стрелка крутит карусель, не переходит */
+  if(e.target.closest('[data-unsave]')) return; /* «убрать из сохранённого» — не открывать карточку */
+  const tc = e.target.closest('[data-topic]');
+  if(tc){ location.hash = `#/${state.dir}/topic/${tc.dataset.topic}`; return; }
+  const pc = e.target.closest('[data-post]');
+  if(pc){ location.hash = `#/${state.dir}/post/${pc.dataset.post}`; return; }
+  const g = e.target.closest('[data-goto]');
+  if(g) location.hash = `#/${state.dir}/${g.dataset.goto}`;
+});
+
+/* Инициализация */
+document.documentElement.lang = lang;
+buildLangMenu($('#langMenuLanding'));
+buildLangMenu($('#langMenuTop'));
+updateStaticTexts();
+/* Вошедший пользователь не видит лендинг — сразу в его раздел */
+if(!location.hash && getUser()){
+  location.hash = '#/' + (localStorage.getItem('nd-last-dir') || 'ras') + '/home';
+}
+/* Видео: пропуск */
+$('#videoSkip').addEventListener('click', () => $('#videoOverlay').classList.remove('show'));
+</script>
+<script>
+/* ==================================================================
+   ПУБЛИКАЦИИ (статьи/истории), СОХРАНЕНИЕ, КОММЕНТАРИИ, МОДЕРАЦИЯ
+   ================================================================== */
+/* Аккаунт, зарегистрированный с этой почты, становится администратором.
+   Смените адрес на свой перед публикацией сайта. */
+const ADMIN_CONTACT = 'daryakimdd@gmail.com';
+
+/* ==================== ОТПРАВКА ПИСЕМ С КОДОМ ====================
+   backend: 'demo'    — код показывается на экране (без сервера)
+   backend: 'server'  — настоящие письма через ВАШ сервер (server.js,
+                        Nodemailer). Если сервер недоступен — автоматически
+                        показывается код на экране (вход не сломается).
+   backend: 'emailjs' — настоящие письма через EmailJS (быстрый старт,
+                        200 писем/мес, без своего сервера).
+   SMS возможны только через сторонний шлюз (Firebase/Twilio) — телефонный
+   режим пока работает в демо (код на экране).
+   =============================================================== */
+const EMAIL_CONFIG = {
+  backend: 'demo',
+  serverUrl: '',  // например 'https://navigator-mail.onrender.com'
+  serverKey: '',  // тот же SERVER_KEY, что задан на сервере
+  emailjs: { publicKey: '', serviceId: '', templateId: '' }
+};
+let emailjsReady = false;
+try {
+  const e = EMAIL_CONFIG.emailjs;
+  if(EMAIL_CONFIG.backend === 'emailjs' && window.emailjs && e.publicKey && e.serviceId && e.templateId){
+    emailjs.init({ publicKey: e.publicKey });
+    emailjsReady = true;
+  }
+} catch(e2){ emailjsReady = false; }
+/* Доставка кода подтверждения */
+function deliverCode(contact, code, isPhone){
+  const box = $('#msgBox');
+  const showDemo = (note) => {
+    box.innerHTML = (isPhone ? '📱 ' : '✉️ ') +
+      `<b>${trF('a_sent', {contact})}</b><br>${tr('a_code_msg')}: <b style="font-size:17px;letter-spacing:.12em">${code}</b>` +
+      `<br><small style="opacity:.65">${note}</small>`;
+    box.style.display = '';
+  };
+  const showSent = () => {
+    box.innerHTML = '✉️ <b>' + trF('a_sent', {contact}) + '</b><br><small>' + tr('mail_sent_note') + '</small>';
+    box.style.display = '';
+  };
+  /* SMS — только демо, пока не подключён шлюз */
+  if(isPhone){ showDemo('Демо: для реальных SMS нужен шлюз (Firebase/Twilio). Код показан на экране.'); return; }
+  /* Режим «свой сервер» */
+  if(EMAIL_CONFIG.backend === 'server' && EMAIL_CONFIG.serverUrl && typeof fetch === 'function'){
+    box.innerHTML = '⏳ ' + trF('a_sent', {contact}) + '…';
+    box.style.display = '';
+    fetch(EMAIL_CONFIG.serverUrl.replace(/\/+$/, '') + '/send-code', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: contact, code: code, key: EMAIL_CONFIG.serverKey })
+    }).then(r => {
+      if(r.ok) showSent();
+      else showDemo('Сервер ответил ошибкой — код показан на экране.');
+    }).catch(() => showDemo('Сервер недоступен — код показан на экране.'));
+    return;
+  }
+  /* Режим EmailJS */
+  if(emailjsReady){
+    emailjs.send(EMAIL_CONFIG.emailjs.serviceId, EMAIL_CONFIG.emailjs.templateId, {
+      to_email: contact, code: code, site: 'Навигатор диагноза'
+    }).then(showSent).catch(() => showDemo('Ошибка отправки — код показан на экране.'));
+    return;
+  }
+  /* Демо */
+  showDemo('Демо-режим: код показан на экране. Настройте backend в EMAIL_CONFIG для реальной отправки.');
+}
+
+/* ---------- Стили ---------- */
+document.head.insertAdjacentHTML('beforeend', `<style>
+.post-text{font-size:15.5px;line-height:1.75;max-width:780px;margin-bottom:28px}
+.author-block{display:flex;align-items:center;gap:14px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px 20px;margin:26px 0;max-width:780px}
+.author-ava{width:44px;height:44px;border-radius:50%;background:var(--accent);color:#fff;font-size:18px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.author-badge{font-size:11px;font-weight:700;color:var(--accent);background:var(--accent-soft);border-radius:8px;padding:2px 9px;margin-left:8px}
+.save-btn{margin-left:auto;background:var(--surface-2);color:var(--accent);border:1px solid var(--border)}
+.save-btn.saved{background:var(--accent);color:#fff}
+.comments{max-width:780px;margin-top:34px}
+.comments h3{font-size:18px;margin-bottom:14px}
+.comment{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--border)}
+.c-ava{width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
+.c-body{min-width:0}
+.c-body small{color:var(--muted);font-weight:400;margin-left:6px}
+.c-body p{font-size:14px;margin-top:3px;word-wrap:break-word}
+#commentForm{margin-top:16px;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+#commentForm textarea,#admText{width:100%;border-radius:12px;border:1px solid var(--border);background:var(--bg);padding:12px 14px;font-size:14px;color:var(--text);font-family:inherit;resize:vertical}
+.status{font-size:11px;font-weight:700;border-radius:8px;padding:2px 9px;display:inline-block}
+.status.pending{background:#fdf0e4;color:#c47a3a}
+.status.published{background:var(--accent-soft);color:var(--accent)}
+.btn-ghost{background:var(--surface-2);color:var(--text);border:1px solid var(--border)}
+.btn-danger{background:#fdeceb;color:#c0453a}
+.adm-item{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px;margin-bottom:14px}
+.adm-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.adm-text{font-size:14px;color:var(--muted);margin-bottom:12px;white-space:pre-wrap}
+.adm-actions{display:flex;gap:8px;flex-wrap:wrap}
+.adm-edit{display:flex;flex-direction:column;gap:10px;margin:10px 0}
+.adm-edit input{width:100%;height:42px;border-radius:12px;border:1px solid var(--border);background:var(--bg);padding:0 14px;font-size:14px;color:var(--text)}
+.field textarea,.field select{width:100%;border-radius:12px;border:1px solid var(--border);background:var(--bg);padding:12px 14px;font-size:14px;color:var(--text);font-family:inherit}
+.field select{height:44px}
+.share-done{text-align:center;padding:14px 6px 18px;font-size:15px;line-height:1.6}
+/* Глаз для пароля */
+.pass-row{display:flex;gap:8px}
+.pass-row input{flex:1}
+.eye-btn{width:44px;height:44px;flex:0 0 auto;border-radius:12px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);display:flex;align-items:center;justify-content:center;transition:all .2s}
+.eye-btn:hover{color:var(--accent);border-color:var(--accent)}
+.eye-btn.on{color:var(--accent);background:var(--accent-soft);border-color:var(--accent)}
+/* Сохранение + комментарии на любой статье */
+.save-row{display:flex;justify-content:flex-end;margin:28px 0 0;max-width:780px}
+/* Выбор страны для телефона */
+.country-select{height:44px;flex:0 0 auto;max-width:104px;border-radius:12px;border:1px solid var(--border);background:var(--bg);color:var(--text);font-size:13px;font-weight:600;padding:0 6px;outline:none}
+.country-select:focus{border-color:var(--accent)}
+/* Закладка «как в Инсте» — сверху справа */
+.topic-top{display:flex;justify-content:space-between;align-items:center;max-width:780px;margin:0 0 18px}
+.insta-save{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--muted);transition:all .2s}
+.insta-save:hover{background:var(--surface-2);color:var(--accent)}
+.insta-save.saved{color:var(--accent)}
+</style>`);
+
+/* ---------- Список стран для телефона ---------- */
+const COUNTRIES = [
+  ['🇰🇿','+7','Казахстан'], ['🇷🇺','+7','Россия'], ['🇺🇦','+380','Украина'],
+  ['🇧🇾','+375','Беларусь'], ['🇺🇸','+1','США/Канада'], ['🇬🇧','+44','Великобритания'],
+  ['🇩🇪','+49','Германия'], ['🇹🇷','+90','Турция'], ['🇦🇪','+971','ОАЭ'],
+  ['🇺🇿','+998','Узбекистан'], ['🇰🇬','+996','Киргизия'], ['🇮🇳','+91','Индия'], ['🇨🇳','+86','Китай']
+];
+const csEl = document.getElementById('countrySelect');
+if(csEl) csEl.innerHTML = COUNTRIES.map(c => `<option value="${c[1]}">${c[0]} ${c[1]}</option>`).join('');
+
+/* ---------- Модальное окно «Поделиться публикацией» ---------- */
+document.body.insertAdjacentHTML('beforeend', `
+<div class="auth-overlay" id="shareOverlay">
+  <div class="auth-modal" role="dialog" aria-modal="true">
+    <button class="auth-close" id="shareClose" aria-label="Закрыть">✕</button>
+    <div id="shareFormWrap">
+      <h2 class="auth-title" id="shareTitle"></h2>
+      <form id="shareForm" novalidate>
+        <div class="field"><label id="lblShTitle">Заголовок</label><input type="text" id="shTitle"></div>
+        <div class="field"><label id="lblShTopic">Тема</label><select id="shTopic"></select></div>
+        <div class="field"><label id="lblShText">Текст</label><textarea id="shText" rows="7"></textarea></div>
+        <div class="auth-error" id="shareErr"></div>
+        <button type="submit" class="btn auth-submit" id="shSubmit">Отправить на проверку</button>
+      </form>
+    </div>
+    <div id="shareDoneWrap" style="display:none">
+      <div class="share-done">✅<br><b id="shareDoneText"></b></div>
+      <button class="btn auth-submit" id="shareDoneBtn">Готово</button>
+    </div>
+  </div>
+</div>`);
+
+/* ---------- Переводы ---------- */
+Object.assign(T.ru, {
+  save:'Сохранить', saved:'Сохранено', login_to_save:'Войдите, чтобы сохранять',
+  comments:'Комментарии', no_comments:'Пока нет комментариев — будьте первым.', your_comment:'Напишите комментарий…',
+  send:'Отправить', login_to_comment:'Войдите в аккаунт, чтобы оставить комментарий.',
+  author_badge:'Автор', share_article:'Поделиться своей статьёй', share_story:'Поделиться своей историей',
+  share_title_l:'Заголовок', share_topic_l:'Тема', share_text_l:'Текст публикации', share_submit:'Отправить на проверку',
+  share_done:'Ваша публикация отправлена на проверку. Она появится на сайте после модерации.',
+  community:'Публикации сообщества', no_posts:'Публикаций пока нет — поделитесь первым!',
+  st_pending:'На проверке', st_published:'Опубликовано', adm:'Модерация',
+  publish:'Опубликовать', edit:'Редактировать', del:'Удалить', save_changes:'Сохранить изменения', cancel:'Отмена',
+  access_denied:'Доступ только для администратора.', fill_all:'Заполните заголовок и текст (текст — не короче 10 символов).',
+  not_found:'Публикация не найдена.', adm_empty:'Нет публикаций для модерации.', adm_hint:'Публикации от пользователей: вы можете отредактировать, опубликовать или удалить их.',
+  sb_saved_articles:'Сохранённые статьи', sb_saved_stories:'Сохранённые истории',
+  saved_empty:'Пока нет сохранённых публикаций.', login_to_view_saved:'Войдите в аккаунт, чтобы увидеть сохранённое.', remove:'Убрать',
+  topic_body_x:'Здесь будет полный текст статьи — тёплый, простой и честный. Материал появится после наполнения раздела.',
+  a_verify_t:'Подтверждение', a_verify:'Подтвердить', a_country:'Страна',
+  mail_sent_note:'Письмо отправлено. Проверьте входящие (и папку «Спам»).'
+});
+Object.assign(T.kz, {
+  save:'Сақтау', saved:'Сақталды', login_to_save:'Сақтау үшін кіріңіз',
+  comments:'Пікірлер', no_comments:'Пікірлер әлі жоқ — бірінші болыңыз.', your_comment:'Пікір жазыңыз…',
+  send:'Жіберу', login_to_comment:'Пікір қалдыру үшін аккаунтыңызға кіріңіз.',
+  author_badge:'Автор', share_article:'Мақалаңызбен бөлісіңіз', share_story:'Оқиғаңызбен бөлісіңіз',
+  share_title_l:'Тақырып', share_topic_l:'Тақырып', share_text_l:'Мәтін', share_submit:'Тексеруге жіберу',
+  share_done:'Жарияланымыңыз тексеруге жіберілді. Модерациядан кейін сайтта пайда болады.',
+  community:'Қауымдастық жарияланымдары', no_posts:'Жарияланымдар әлі жоқ — бірінші болып бөлісіңіз!',
+  st_pending:'Тексеруде', st_published:'Жарияланды', adm:'Модерация',
+  publish:'Жариялау', edit:'Өңдеу', del:'Жою', save_changes:'Өзгерістерді сақтау', cancel:'Болдырмау',
+  access_denied:'Бұл бөлік тек әкімшіге арналған.', fill_all:'Тақырып пен мәтінді толтырыңыз (мәтін кемінде 10 таңба).',
+  not_found:'Жарияланым табылмады.', adm_empty:'Модерацияға жарияланым жоқ.', adm_hint:'Пайдаланушылардың жарияланымдары: өңдеу, жариялау немесе жоюға болады.',
+  sb_saved_articles:'Сақталған мақалалар', sb_saved_stories:'Сақталған оқиғалар',
+  saved_empty:'Сақталған жарияланымдар әлі жоқ.', login_to_view_saved:'Сақталғанды көру үшін аккаунтыңызға кіріңіз.', remove:'Алып тастау',
+  topic_body_x:'Мұнда мақаланың толық мәтіні болады — жылы, қарапайым және адал. Материал бөлім толтырылғаннан кейін пайда болады.',
+  a_verify_t:'Растау', a_verify:'Растау', a_country:'Ел',
+  mail_sent_note:'Хат жіберілді. Келіп түскен хаттарды тексеріңіз (және «Спам» қалтасын).'
+});
+Object.assign(T.en, {
+  save:'Save', saved:'Saved', login_to_save:'Sign in to save',
+  comments:'Comments', no_comments:'No comments yet — be the first.', your_comment:'Write a comment…',
+  send:'Send', login_to_comment:'Sign in to leave a comment.',
+  author_badge:'Author', share_article:'Share your article', share_story:'Share your story',
+  share_title_l:'Title', share_topic_l:'Topic', share_text_l:'Text', share_submit:'Send for review',
+  share_done:'Your publication has been sent for review. It will appear on the site after moderation.',
+  community:'Community publications', no_posts:'No publications yet — share the first one!',
+  st_pending:'Pending review', st_published:'Published', adm:'Moderation',
+  publish:'Publish', edit:'Edit', del:'Delete', save_changes:'Save changes', cancel:'Cancel',
+  access_denied:'Administrators only.', fill_all:'Fill in the title and text (text — at least 10 characters).',
+  not_found:'Publication not found.', adm_empty:'Nothing to moderate.', adm_hint:'User publications: you can edit, publish or delete them.',
+  sb_saved_articles:'Saved articles', sb_saved_stories:'Saved stories',
+  saved_empty:'No saved publications yet.', login_to_view_saved:'Sign in to view your saved items.', remove:'Remove',
+  topic_body_x:'The full text of the article will appear here — warm, simple and honest. The material will be added once the section is filled.',
+  a_verify_t:'Verification', a_verify:'Confirm', a_country:'Country',
+  mail_sent_note:'The email has been sent. Check your inbox (and the Spam folder).'
+});
+
+/* ---------- Хранилища ---------- */
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function getPosts(){ try { return JSON.parse(localStorage.getItem('nd-posts')) || []; } catch(e){ return []; } }
+function savePosts(p){ localStorage.setItem('nd-posts', JSON.stringify(p)); }
+function addPost(o){ const p = getPosts(); o.id = Date.now(); p.push(o); savePosts(p); return o.id; }
+function updatePost(id, patch){ const p = getPosts(); const i = p.findIndex(x => String(x.id) === String(id)); if(i > -1){ Object.assign(p[i], patch); savePosts(p); } }
+function deletePost(id){ savePosts(getPosts().filter(x => String(x.id) !== String(id))); }
+function getComments(){ try { return JSON.parse(localStorage.getItem('nd-comments')) || {}; } catch(e){ return {}; } }
+function addComment(postId, c){ const all = getComments(); (all[postId] = all[postId] || []).push(c); localStorage.setItem('nd-comments', JSON.stringify(all)); }
+function getSaved(contact){ try { return JSON.parse(localStorage.getItem('nd-saved-' + contact)) || []; } catch(e){ return []; } }
+function toggleSaved(contact, id){ let s = getSaved(contact); s = s.includes(id) ? s.filter(x => x !== id) : s.concat([id]); localStorage.setItem('nd-saved-' + contact, JSON.stringify(s)); return s.includes(id); }
+function isAdmin(){
+  const u = getUser();
+  if(!u) return false;
+  if(u.role === 'admin') return true;
+  const db = findUser(u.contact);
+  return !!(db && db.role === 'admin');
+}
+
+/* ---------- Страница публикации ---------- */
+function renderPostPage(d){
+  const p = getPosts().find(x => String(x.id) === String(state.postId));
+  const me = getUser();
+  const allowed = p && (p.status === 'published' || (me && (p.author === me.name || isAdmin())));
+  if(!allowed) return `<button class="back-btn" data-back>← ${tr('back')}</button><div class="placeholder-note">${tr('not_found')}</div>`;
+  const saved = me ? getSaved(me.contact).includes(String(p.id)) : false;
+  const cmts = (getComments()[p.id] || []);
+  const artSec = sectionsFor(p.dir).find(x => x.id === 'articles');
+  const code = p.dir === 'unsure' ? '<b style="color:#151515">?</b>' : DIRS[p.dir].code;
+  const commentsHtml = cmts.map(c => `
+    <div class="comment">
+      <div class="c-ava">${esc(String(c.user || '?')[0].toUpperCase())}</div>
+      <div class="c-body"><b>${esc(c.user)}</b><small>${new Date(c.time).toLocaleDateString()}</small><p>${esc(c.text)}</p></div>
+    </div>`).join('');
+  return `
+    <button class="back-btn" data-back>← ${tr('back')}</button>
+    <div class="article-head">
+      <div class="breadcrumb"><a href="#/">${tr('crumb_home')}</a><span class="sep">→</span><a href="#/${p.dir}/home">${code}</a><span class="sep">→</span><a href="#/${p.dir}/articles">${artSec ? titleOf(artSec, p.dir) : ''}</a><span class="sep">→</span><span>${esc(p.title)}</span></div>
+      <h1>${esc(p.title)}</h1>
+      <p class="lead"><span class="art-tag">${esc(p.topic || '')}</span></p>
+    </div>
+    <div class="post-text">${esc(p.text).replace(/\n/g, '<br>')}</div>
+    <div class="author-block">
+      <div class="author-ava">${esc(String(p.author || '?')[0].toUpperCase())}</div>
+      <div><b>${esc(p.author)}</b><span class="author-badge">${tr('author_badge')}</span></div>
+      <button class="btn save-btn ${saved ? 'saved' : ''}" data-save-post="${p.id}">${me ? (saved ? '✓ ' + tr('saved') : '🔖 ' + tr('save')) : tr('login_to_save')}</button>
+    </div>
+    <div class="comments">
+      <h3>${tr('comments')} (${cmts.length})</h3>
+      ${commentsHtml || `<p class="muted">${tr('no_comments')}</p>`}
+      ${me
+        ? `<form id="commentForm" data-post="${p.id}"><textarea id="commentText" rows="3" placeholder="${tr('your_comment')}" required></textarea><button class="btn" type="submit">${tr('send')}</button></form>`
+        : `<div class="placeholder-note">${tr('login_to_comment')}</div>`}
+    </div>`;
+}
+
+/* ---------- Страница тематической статьи ---------- */
+function renderTopicPage(d){
+  const idx = Number(state.topicIdx);
+  const t = tr('topics')[idx];
+  if(t === undefined) return `<button class="back-btn" data-back>← ${tr('back')}</button><div class="placeholder-note">${tr('not_found')}</div>`;
+  const id = 'topic-' + state.dir + '-' + idx;
+  const me = getUser();
+  const saved = me ? getSaved(me.contact).includes(id) : false;
+  const artSec = sectionsFor(state.dir).find(x => x.id === 'articles');
+  const code = state.dir === 'unsure' ? '<b style="color:#151515">?</b>' : d.code;
+  return `
+    <button class="back-btn" data-back>← ${tr('back')}</button>
+    <div class="article-head">
+      <div class="breadcrumb"><a href="#/">${tr('crumb_home')}</a><span class="sep">→</span><a href="#/${state.dir}/home">${code}</a><span class="sep">→</span><a href="#/${state.dir}/articles">${artSec ? titleOf(artSec, state.dir) : ''}</a><span class="sep">→</span><span>${esc(t)}</span></div>
+      <div class="topic-top">
+        <span class="art-tag">${esc(t)}</span>
+        <button class="insta-save ${saved ? 'saved' : ''}" data-save-post="${id}" title="${me ? (saved ? tr('saved') : tr('save')) : tr('login_to_save')}" aria-label="${tr('save')}">
+          <svg width="21" height="21" viewBox="0 0 24 24" fill="${saved ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4.5L5 21V4a1 1 0 0 1 1-1z"/></svg>
+        </button>
+      </div>
+      <h1>${esc(t)}</h1>
+      <p class="lead">${trF('art_ph', {t: t.toLowerCase()})}</p>
+    </div>
+    <div class="post-text">${tr('topic_body_x')}</div>
+    ${interactionBlock(id)}
+  `;
+}
+
+/* ---------- Блок «Сохранить + комментарии» (для любой статьи) ---------- */
+function interactionBlock(id){
+  const me = getUser();
+  const saved = me ? getSaved(me.contact).includes(String(id)) : false;
+  const cmts = (getComments()[id] || []);
+  const commentsHtml = cmts.map(c => `
+    <div class="comment">
+      <div class="c-ava">${esc(String(c.user || '?')[0].toUpperCase())}</div>
+      <div class="c-body"><b>${esc(c.user)}</b><small>${new Date(c.time).toLocaleDateString()}</small><p>${esc(c.text)}</p></div>
+    </div>`).join('');
+  return `
+    <div class="save-row">
+      <button class="btn save-btn ${saved ? 'saved' : ''}" data-save-post="${id}">${me ? (saved ? '✓ ' + tr('saved') : '🔖 ' + tr('save')) : tr('login_to_save')}</button>
+    </div>
+    <div class="comments" style="margin-top:18px">
+      <h3>${tr('comments')} (${cmts.length})</h3>
+      ${commentsHtml || `<p class="muted">${tr('no_comments')}</p>`}
+      ${me
+        ? `<form id="commentForm" data-post="${id}"><textarea id="commentText" rows="3" placeholder="${tr('your_comment')}" required></textarea><button class="btn" type="submit">${tr('send')}</button></form>`
+        : `<div class="placeholder-note">${tr('login_to_comment')}</div>`}
+    </div>`;
+}
+
+/* ---------- Страница «Сохранённое» ---------- */
+function renderSavedPage(d){
+  const me = getUser();
+  const title = state.dir === 'dcp' ? tr('sb_saved_stories') : tr('sb_saved_articles');
+  if(!me) return `<button class="back-btn" data-back>← ${tr('back')}</button>
+    <div class="article-head"><h1>${title}</h1></div>
+    <div class="placeholder-note">${tr('login_to_view_saved')}</div>`;
+  const items = getSaved(me.contact).map(id => {
+    const sid = String(id);
+    if(sid.indexOf('sec-') === 0){
+      const parts = sid.split('-'); /* sec-<dir>-<sectionId> */
+      const dir = parts[1], secId = parts.slice(2).join('-');
+      const sec = sectionsFor(dir).find(x => x.id === secId);
+      return sec ? {id: sid, dir, title: titleOf(sec, dir), topic: '', text: shortOf(sec), secId} : null;
+    }
+    if(sid.indexOf('topic-') === 0){
+      const parts = sid.split('-'); /* topic-<dir>-<index> */
+      const dir = parts[1], tIdx = parts[2];
+      const t = T[lang].topics[tIdx];
+      return t ? {id: sid, dir, title: t, topic: '', text: '', topicIdx: tIdx} : null;
+    }
+    const p = getPosts().find(x => String(x.id) === sid);
+    return (p && p.status === 'published') ? p : null;
+  }).filter(Boolean).filter(x => x.dir === state.dir).reverse();
+  const cards = items.map(p => `
+    <div class="art-card" ${p.secId ? `data-goto="${p.secId}"` : (p.topicIdx !== undefined ? `data-topic="${p.topicIdx}"` : `data-post="${p.id}"`)}>
+      <div class="art-cover"><span>${esc(String(p.topic || p.title || '✦').split(' ')[0])}</span></div>
+      <div class="art-body">
+        ${p.topic ? `<span class="art-tag">${esc(p.topic)}</span>` : ''}
+        <h3>${esc(p.title)}</h3>
+        <p>${esc(p.text || '').slice(0, 80)}${(p.text || '').length > 80 ? '…' : ''}</p>
+        <button class="btn btn-ghost" style="align-self:flex-start;font-size:12px;padding:6px 12px" data-unsave="${p.id}">✕ ${tr('remove')}</button>
+      </div>
+    </div>`).join('');
+  return `<button class="back-btn" data-back>← ${tr('back')}</button>
+    <div class="article-head"><div class="breadcrumb"><a href="#/">${tr('crumb_home')}</a><span class="sep">→</span><a href="#/${state.dir}/home">${state.dir === 'unsure' ? '<b style="color:#151515">?</b>' : d.code}</a><span class="sep">→</span><span>${title}</span></div>
+    <h1>${title}</h1></div>
+    ${cards ? `<div class="articles-grid">${cards}</div>` : `<div class="placeholder-note">${tr('saved_empty')}</div>`}`;
+}
+
+/* ---------- Админка: модерация ---------- */
+let admEdit = null;
+function renderAdminPage(){
+  if(!isAdmin()) return `<div class="placeholder-note">${tr('access_denied')}</div>`;
+  const posts = getPosts().slice().reverse();
+  const rows = posts.map(p => {
+    const editing = String(admEdit) === String(p.id);
+    return `<div class="adm-item" data-id="${p.id}">
+      <div class="adm-head">
+        <span class="sr-tag">${DIRS[p.dir] ? DIRS[p.dir].code : '?'}</span>
+        <b>${esc(p.title)}</b>
+        <span class="status ${p.status}">${tr(p.status === 'pending' ? 'st_pending' : 'st_published')}</span>
+        <span class="muted">· ${esc(p.author)}</span>
+      </div>
+      ${editing ? `
+        <div class="adm-edit">
+          <input id="admTitle" value="${esc(p.title)}">
+          <textarea id="admText" rows="6">${esc(p.text)}</textarea>
+          <div class="adm-actions"><button class="btn" data-adm-save="${p.id}">${tr('save_changes')}</button><button class="btn btn-ghost" data-adm-cancel="1">${tr('cancel')}</button></div>
+        </div>`
+      : `<p class="adm-text">${esc(p.text).slice(0, 220)}${p.text.length > 220 ? '…' : ''}</p>`}
+      <div class="adm-actions">
+        ${p.status === 'pending' ? `<button class="btn" data-adm-publish="${p.id}">${tr('publish')}</button>` : ''}
+        <button class="btn btn-ghost" data-adm-edit="${p.id}">${tr('edit')}</button>
+        <button class="btn btn-danger" data-adm-del="${p.id}">${tr('del')}</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `
+    <button class="back-btn" data-back>← ${tr('back')}</button>
+    <div class="article-head"><div class="breadcrumb"><a href="#/">${tr('crumb_home')}</a><span class="sep">→</span><span>${tr('adm')}</span></div>
+    <h1>${tr('adm')}</h1><p class="lead">${tr('adm_hint')}</p></div>
+    ${rows || `<div class="placeholder-note">${tr('adm_empty')}</div>`}`;
+}
+function refreshAdmin(){ if(location.hash.replace(/^#\/?/, '').split('/')[0] === 'admin') $('#page-section').innerHTML = renderAdminPage(); }
+
+/* ---------- «Поделиться публикацией» ---------- */
+function openShare(){
+  $('#shareTitle').textContent = state.dir === 'dcp' ? tr('share_story') : tr('share_article');
+  $('#lblShTitle').textContent = tr('share_title_l'); $('#lblShTopic').textContent = tr('share_topic_l');
+  $('#lblShText').textContent = tr('share_text_l'); $('#shSubmit').textContent = tr('share_submit');
+  $('#shTopic').innerHTML = tr('topics').map(t => `<option>${esc(t)}</option>`).join('');
+  $('#shareFormWrap').style.display = '';
+  $('#shareDoneWrap').style.display = 'none';
+  $('#shareErr').textContent = '';
+  $('#shareForm').reset();
+  $('#shareOverlay').classList.add('show');
+}
+
+/* ---------- Обработчики ---------- */
+document.addEventListener('click', e => {
+  const eye = e.target.closest('[data-eye]');
+  if(eye){
+    const inp = document.getElementById(eye.dataset.eye);
+    if(inp){
+      const show = inp.type === 'password';
+      inp.type = show ? 'text' : 'password';
+      eye.classList.toggle('on', show);
+    }
+    return;
+  }
+  const un = e.target.closest('[data-unsave]');
+  if(un){
+    const me = getUser();
+    if(me){ toggleSaved(me.contact, un.dataset.unsave); renderSection($('#page-section')); }
+    return;
+  }
+  const spb = e.target.closest('[data-save-post]');
+  if(spb){
+    const me = getUser();
+    if(!me){ openAuth(); return; }
+    const nowSaved = toggleSaved(me.contact, spb.dataset.savePost);
+    if(spb.classList.contains('insta-save')){
+      /* закладка «как в Инсте»: меняем только заливку иконки */
+      spb.classList.toggle('saved', nowSaved);
+      const path = spb.querySelector('svg path');
+      if(path) path.setAttribute('fill', nowSaved ? 'currentColor' : 'none');
+      spb.title = nowSaved ? tr('saved') : tr('save');
+      return;
+    }
+    spb.classList.toggle('saved', nowSaved);
+    spb.innerHTML = nowSaved ? '✓ ' + tr('saved') : '🔖 ' + tr('save');
+    return;
+  }
+  if(e.target.closest('[data-share-open]')){
+    if(!getUser()){ openAuth(); return; }
+    openShare(); return;
+  }
+  if(e.target.closest('#shareClose') || e.target === $('#shareOverlay')){
+    $('#shareOverlay').classList.remove('show'); return;
+  }
+  if(e.target.closest('#shareDoneBtn')){
+    $('#shareOverlay').classList.remove('show');
+    if(state.page === 'articles') renderSection($('#page-section'));
+    return;
+  }
+  const pub = e.target.closest('[data-adm-publish]');
+  if(pub){ updatePost(pub.dataset.admPublish, {status:'published'}); refreshAdmin(); return; }
+  const edt = e.target.closest('[data-adm-edit]');
+  if(edt){ admEdit = edt.dataset.admEdit; refreshAdmin(); return; }
+  if(e.target.closest('[data-adm-cancel]')){ admEdit = null; refreshAdmin(); return; }
+  const sav = e.target.closest('[data-adm-save]');
+  if(sav){
+    updatePost(sav.dataset.admSave, {title: $('#admTitle').value.trim(), text: $('#admText').value.trim()});
+    admEdit = null; refreshAdmin(); return;
+  }
+  const del = e.target.closest('[data-adm-del]');
+  if(del){ deletePost(del.dataset.admDel); admEdit = null; refreshAdmin(); return; }
+});
+document.addEventListener('submit', e => {
+  if(e.target.id === 'commentForm'){
+    e.preventDefault();
+    const me = getUser();
+    if(!me){ openAuth(); return; }
+    const t = $('#commentText').value.trim();
+    if(!t) return;
+    addComment(e.target.dataset.post, {user: me.name, text: t, time: Date.now()});
+    renderSection($('#page-section'));
+    return;
+  }
+  if(e.target.id === 'shareForm'){
+    e.preventDefault();
+    const me = getUser();
+    if(!me){ openAuth(); return; }
+    const title = $('#shTitle').value.trim(), text = $('#shText').value.trim();
+    if(title.length < 3 || text.length < 10){ $('#shareErr').textContent = tr('fill_all'); return; }
+    addPost({dir: state.dir, title, topic: $('#shTopic').value, text, author: me.name, status: 'pending', created: Date.now()});
+    $('#shareFormWrap').style.display = 'none';
+    $('#shareDoneText').textContent = tr('share_done');
+    $('#shareDoneWrap').style.display = '';
+    return;
+  }
+});
+document.addEventListener('keydown', e => { if(e.key === 'Escape') $('#shareOverlay').classList.remove('show'); });
+
+/* Старт приложения (после определения всех модулей) */
+route();
+</script>
+</body>
+</html>
