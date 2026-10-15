@@ -312,6 +312,7 @@ body{overflow-x:hidden}
 .auth-name{text-align:center;font-size:18px;font-weight:700;margin-bottom:4px}
 .auth-contact{text-align:center;color:var(--muted);font-size:14px;margin-bottom:20px}
 </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -1277,9 +1278,9 @@ const ADMIN_CONTACT = 'daryakimdd@gmail.com';
    режим пока работает в демо (код на экране).
    =============================================================== */
 const EMAIL_CONFIG = {
-  backend: 'demo',
-  serverUrl: '',  // например 'https://navigator-mail.onrender.com'
-  serverKey: '',  // тот же SERVER_KEY, что задан на сервере
+  backend: 'server',
+  serverUrl: 'https://navigator-mail.onrender.com',
+  serverKey: 'ВСТАВЬТЕ_СЮДА_ВАШ_SERVER_KEY',  /* тот же, что задан на Render */
   emailjs: { publicKey: '', serviceId: '', templateId: '' }
 };
 let emailjsReady = false;
