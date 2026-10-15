@@ -1,15 +1,13 @@
 /* ================================================================
    СЕРВЕР САЙТА «Навигатор диагноза» — всё в одном файле
    ----------------------------------------------------------------
-   Что умеет:
-   1. Раздаёт сам сайт (index.html) — сайт и сервер живут вместе
-   2. Отправляет коды подтверждения на почту (Nodemailer)
-   3. Аккаунты: регистрация (с кодом), вход, роли user/admin
-   4. Публикации (статьи/истории): отправка на проверку, модерация
-   5. Комментарии и «Сохранённое»
-   Данные хранятся в файле data.json (создаётся сам при первом
-   запуске). Пароли хранятся в зашифрованном виде (bcrypt).
-   Деплой: Render.com — инструкция в конце файла.
+   1. Раздаёт сам сайт (index.html)
+   2. Отправляет коды подтверждения на почту — ДВА способа:
+      а) Brevo HTTP API (если задан BREVO_KEY) — работает ВЕЗДЕ,
+         потому что идёт через обычный HTTPS (порт 443);
+      б) SMTP Gmail через порт 587 (если Brevo не задан).
+   3. Аккаунты, публикации, комментарии, «Сохранённое» — data.json
+   Пароли хранятся в зашифрованном виде (bcrypt).
    ================================================================ */
 const express = require('express');
 const cors = require('cors');
@@ -22,24 +20,26 @@ const bcrypt = require('bcryptjs');
 const app = express();
 app.use(cors());
 app.use(express.json());
-app.use(express.static(__dirname)); /* раздаёт index.html и др. файлы */
+app.use(express.static(__dirname));
 
 /* ================== НАСТРОЙКИ (переменные окружения на Render) ==================
-   SERVER_KEY      — секретный ключ сайта (придумайте длинный случайный)
-   GMAIL_USER      — ваша почта, например daryakimdd@gmail.com
-   GMAIL_APP_PASS  — «пароль приложения» Google (16 символов, НЕ обычный
-                     пароль!). myaccount.google.com → Безопасность →
-                     Двухэтапная аутентификация → Пароли приложений
-   FROM_NAME       — имя отправителя в письме
-   ADMIN_CONTACT   — почта, которая становится администратором
+   SERVER_KEY      — секретный ключ сайта (длинная случайная строка)
+   GMAIL_USER      — ваша почта: daryakimdd@gmail.com
+   GMAIL_APP_PASS  — «пароль приложения» Google (16 символов, НЕ обычный пароль)
+   FROM_NAME       — имя отправителя
+   ADMIN_CONTACT   — почта администратора
+   BREVO_KEY       — (опционально) API-ключ с brevo.com — самый надёжный
+                     способ отправки: не использует SMTP-порты вообще.
+                     Если SMTP у хостинга закрыт, задайте BREVO_KEY.
    PORT            — порт (на Render задаётся автоматически)              */
 const SERVER_KEY = process.env.SERVER_KEY || 'смените-этот-ключ';
 const GMAIL_USER = process.env.GMAIL_USER || '';
 const GMAIL_APP_PASS = process.env.GMAIL_APP_PASS || '';
 const FROM_NAME = process.env.FROM_NAME || 'Навигатор диагноза';
 const ADMIN_CONTACT = process.env.ADMIN_CONTACT || 'daryakimdd@gmail.com';
+const BREVO_KEY = process.env.BREVO_KEY || '';
 const PORT = process.env.PORT || 3000;
-const RATE_LIMIT_MS = Number(process.env.RATE_LIMIT_MS || 60000); /* пауза между письмами с одного IP */
+const RATE_LIMIT_MS = Number(process.env.RATE_LIMIT_MS || 60000);
 const DB_FILE = path.join(__dirname, 'data.json');
 
 /* ================== БАЗА ДАННЫХ (JSON-файл) ================== */
@@ -51,27 +51,49 @@ let db = loadDB();
 function saveDB(){ fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 1)); }
 
 /* ================== ПОЧТА ================== */
-const mailReady = !!(GMAIL_USER && GMAIL_APP_PASS);
-const transporter = mailReady ? nodemailer.createTransport({
-  host: process.env.SMTP_HOST || 'smtp.gmail.com',
-  port: Number(process.env.SMTP_PORT || 465),
-  secure: true,
-  auth: { user: GMAIL_USER, pass: GMAIL_APP_PASS }
-}) : null;
-
-function sendCodeEmail(email, code){
-  if(!transporter) return Promise.resolve(false);
+const mailMode = BREVO_KEY ? 'brevo' : (GMAIL_USER && GMAIL_APP_PASS ? 'smtp' : 'none');
+function sendMail(to, subject, text, html){
+  /* Способ 1: Brevo HTTP API — порт 443, блокировать его никто не будет */
+  if(BREVO_KEY){
+    return fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: { 'accept': 'application/json', 'content-type': 'application/json', 'api-key': BREVO_KEY },
+      body: JSON.stringify({
+        sender: { name: FROM_NAME, email: GMAIL_USER },
+        to: [{ email: to }],
+        subject: subject,
+        textContent: text,
+        htmlContent: html
+      })
+    }).then(r => { if(!r.ok) throw new Error('Brevo HTTP ' + r.status); return true; });
+  }
+  /* Способ 2: SMTP Gmail, порт 587 (465 у многих хостингов закрыт/таймаутит) */
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: false,
+    requireTLS: true,
+    auth: { user: GMAIL_USER, pass: GMAIL_APP_PASS },
+    connectionTimeout: 15000
+  });
   return transporter.sendMail({
     from: `"${FROM_NAME}" <${GMAIL_USER}>`,
-    to: email,
-    subject: `Код подтверждения — ${FROM_NAME}`,
-    text: `Здравствуйте!\n\nВаш код подтверждения: ${code}\n\nЕсли это были не вы — просто проигнорируйте письмо.`,
-    html: `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6">
+    to, subject, text, html
+  }).then(() => true);
+}
+
+function sendCodeEmail(email, code){
+  if(mailMode === 'none') return Promise.resolve(false);
+  return sendMail(
+    email,
+    `Код подтверждения — ${FROM_NAME}`,
+    `Здравствуйте!\n\nВаш код подтверждения: ${code}\n\nЕсли это были не вы — просто проигнорируйте письмо.`,
+    `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6">
       <p>Здравствуйте!</p>
       <p>Ваш код подтверждения:<br><b style="font-size:24px;letter-spacing:4px">${code}</b></p>
       <p style="color:#777;font-size:13px">Если это были не вы — просто проигнорируйте письмо.</p>
     </div>`
-  }).then(() => true).catch(e => { console.error('Почта:', e.message); return false; });
+  ).then(() => true).catch(e => { console.error('Почта:', e.message); return false; });
 }
 
 /* ================== УТИЛИТЫ ================== */
@@ -90,7 +112,6 @@ function auth(req){
 function isAdminUser(user){ return user && (user.role === 'admin' || user.contact === ADMIN_CONTACT); }
 function publicUser(u){ return { name: u.name, contact: u.contact, contactMode: u.contactMode, role: u.role }; }
 
-/* Простая защита от спама: не чаще 1 запроса в 60 секунд с одного IP */
 const lastHit = new Map();
 function rateLimit(req, res){
   const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '?').toString().split(',')[0].trim();
@@ -101,17 +122,16 @@ function rateLimit(req, res){
 }
 
 /* ================== API: КОДЫ ПОДТВЕРЖДЕНИЯ ================== */
-/* Запрос кода (регистрация/вход/восстановление). Письмо уходит на почту. */
 app.post('/api/code', async (req, res) => {
   if(!rateLimit(req, res)) return;
   const contact = clean(req.body.contact);
   if(!isEmail(contact)) return res.status(400).json({ ok: false, error: 'Некорректный email' });
   const code = String(Math.floor(100000 + Math.random() * 900000));
-  db.codes[contact] = { code, exp: now() + 10 * 60 * 1000 }; /* код живёт 10 минут */
+  db.codes[contact] = { code, exp: now() + 10 * 60 * 1000 };
   saveDB();
   const sent = await sendCodeEmail(contact, code);
   const out = { ok: true, sent };
-  if(!sent) out.devCode = code; /* если почта не настроена — код в ответе (для теста) */
+  if(!sent) out.devCode = code;
   res.json(out);
 });
 
@@ -123,7 +143,6 @@ function checkCode(contact, code){
 }
 
 /* ================== API: АККАУНТЫ ================== */
-/* Регистрация: имя, контакт, пароль, код из письма */
 app.post('/api/register', (req, res) => {
   const name = clean(req.body.name), contact = clean(req.body.contact),
         contactMode = clean(req.body.contactMode) || 'email',
@@ -141,7 +160,6 @@ app.post('/api/register', (req, res) => {
   res.json({ ok: true, token, user: publicUser(user) });
 });
 
-/* Вход: контакт + пароль */
 app.post('/api/login', (req, res) => {
   const contact = clean(req.body.contact), pass = String(req.body.pass || '');
   const user = db.users.find(u => u.contact === contact);
@@ -152,14 +170,12 @@ app.post('/api/login', (req, res) => {
   res.json({ ok: true, token, user: publicUser(user) });
 });
 
-/* Кто я (по токену) */
 app.get('/api/me', (req, res) => {
   const a = auth(req);
   if(!a) return res.status(401).json({ ok: false });
   res.json({ ok: true, user: publicUser(a.user) });
 });
 
-/* Восстановление пароля: контакт + код + новый пароль */
 app.post('/api/reset-pass', (req, res) => {
   const contact = clean(req.body.contact), code = clean(req.body.code), pass = String(req.body.pass || '');
   const user = db.users.find(u => u.contact === contact);
@@ -171,7 +187,6 @@ app.post('/api/reset-pass', (req, res) => {
   res.json({ ok: true });
 });
 
-/* Выход */
 app.post('/api/logout', (req, res) => {
   const a = auth(req);
   if(a){ delete db.sessions[a.token]; saveDB(); }
@@ -179,7 +194,6 @@ app.post('/api/logout', (req, res) => {
 });
 
 /* ================== API: ПУБЛИКАЦИИ ================== */
-/* Список: ?dir=ras|dcp — опубликованные (+ «на проверке» для автора/админа, если передан токен) */
 app.get('/api/posts', (req, res) => {
   const dir = clean(req.query.dir);
   const a = auth(req);
@@ -190,7 +204,6 @@ app.get('/api/posts', (req, res) => {
   res.json({ ok: true, posts: posts.slice().reverse() });
 });
 
-/* Добавить публикацию — уходит на проверку */
 app.post('/api/posts', (req, res) => {
   const a = auth(req);
   if(!a) return res.status(401).json({ ok: false, error: 'Войдите в аккаунт' });
@@ -203,7 +216,6 @@ app.post('/api/posts', (req, res) => {
   res.json({ ok: true, post });
 });
 
-/* Модерация: редактировать / опубликовать (status: 'published') */
 app.patch('/api/posts/:id', (req, res) => {
   const a = auth(req);
   if(!a) return res.status(401).json({ ok: false });
@@ -218,7 +230,6 @@ app.patch('/api/posts/:id', (req, res) => {
   res.json({ ok: true, post: p });
 });
 
-/* Удалить (автор — свою на проверке, админ — любую) */
 app.delete('/api/posts/:id', (req, res) => {
   const a = auth(req);
   if(!a) return res.status(401).json({ ok: false });
@@ -271,7 +282,6 @@ app.delete('/api/saved', (req, res) => {
 });
 
 /* ================== ПРОЧЕЕ ================== */
-/* Старый endpoint (для текущей версии сайта) — код по ключу */
 app.post('/send-code', async (req, res) => {
   if(!rateLimit(req, res)) return;
   const { email, code, key } = req.body || {};
@@ -281,21 +291,21 @@ app.post('/send-code', async (req, res) => {
   res.json({ ok: true, sent });
 });
 
-app.get('/health', (req, res) => res.json({ ok: true, mail: mailReady, users: db.users.length, posts: db.posts.length }));
+app.get('/health', (req, res) => res.json({ ok: true, mail: mailMode, users: db.users.length, posts: db.posts.length }));
 
-app.listen(PORT, () => console.log(`Сервер запущен: http://localhost:${PORT} (почта: ${mailReady ? 'настроена' : 'НЕ настроена'})`));
+app.listen(PORT, () => console.log(`Сервер запущен на порту ${PORT} (почта: ${mailMode})`));
 
 /* ================== ДЕПЛОЙ НА RENDER.COM ==================
-   1. github.com → новый репозиторий → загрузите: server.js, package.json, index.html
-   2. render.com → New → Web Service → ваш репозиторий
-   3. Build Command:  npm install
-      Start Command:  node server.js
-   4. Environment Variables:
-        SERVER_KEY      = придумайте длинную случайную строку
-        GMAIL_USER      = daryakimdd@gmail.com
-        GMAIL_APP_PASS  = пароль приложения Google (16 символов)
-        FROM_NAME       = Навигатор диагноза
-        ADMIN_CONTACT   = daryakimdd@gmail.com
-   5. Deploy. Сайт откроется по адресу вида https://ваш-проект.onrender.com
-      Проверка: https://ваш-проект.onrender.com/health
+   1. github.com → ваш репозиторий → Add file → Upload files →
+      загрузите server.js, package.json, index.html
+   2. render.com → ваш сервис → Environment:
+        SERVER_KEY      — длинная случайная строка
+        GMAIL_USER      — daryakimdd@gmail.com
+        GMAIL_APP_PASS  — пароль приложения Google (16 символов)
+        FROM_NAME       — Навигатор диагноза
+        ADMIN_CONTACT   — daryakimdd@gmail.com
+        BREVO_KEY       — (опционально) API-ключ с brevo.com — включить,
+                          если в логах снова «Connection timeout»
+   3. Проверка: https://ваш-проект.onrender.com/health → "mail": "smtp"
+      или "brevo" вместо "none"
    ================================================================ */
