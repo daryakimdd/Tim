@@ -3,7 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Навигатор диагноза — помощь семьям</title>
+<title>timtim — РАС и ДЦП: помощь семьям после диагноза</title>
+<meta name="description" content="timtim — понятная информация для родителей после постановки ребёнку диагноза РАС (аутизм) или ДЦП: права и льготы, оформление инвалидности, реабилитация, статьи и истории семей.">
+<meta name="keywords" content="РАС, расстройства аутистического спектра, аутизм, ДЦП, детский церебральный паралич, льготы, инвалидность, реабилитация, помощь семьям">
+<meta name="robots" content="index, follow">
+<meta property="og:title" content="timtim — помощь семьям после диагноза РАС и ДЦП">
+<meta property="og:description" content="Права, льготы, инвалидность, реабилитация, статьи и истории — всё о диагнозе ребёнка простым языком.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://navigator-mail.onrender.com/">
+<meta property="og:site_name" content="timtim">
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
 /* ================= БАЗА ================= */
@@ -312,7 +320,6 @@ body{overflow-x:hidden}
 .auth-name{text-align:center;font-size:18px;font-weight:700;margin-bottom:4px}
 .auth-contact{text-align:center;color:var(--muted);font-size:14px;margin-bottom:20px}
 </style>
-<base target="_blank">
 </head>
 <body>
 
@@ -416,7 +423,7 @@ body{overflow-x:hidden}
 
 <!-- ================= SIDEBAR ================= -->
 <aside class="sidebar" id="sidebar" style="display:none">
-  <div class="side-brand"><span class="mark">Н</span>Навигатор диагноза</div>
+  <div class="side-brand"><span class="mark">t</span>timtim</div>
   <nav class="side-nav" id="sideNav"></nav>
 </aside>
 
@@ -1280,7 +1287,7 @@ const ADMIN_CONTACT = 'daryakimdd@gmail.com';
 const EMAIL_CONFIG = {
   backend: 'server',
   serverUrl: 'https://navigator-mail.onrender.com',
-  serverKey: '7878385785643594574dhqdhewufh804858050',  /* тот же, что задан на Render */
+  serverKey: 'ВСТАВЬТЕ_СЮДА_ВАШ_SERVER_KEY',  /* тот же, что задан на Render */
   emailjs: { publicKey: '', serviceId: '', templateId: '' }
 };
 let emailjsReady = false;
@@ -1323,7 +1330,7 @@ function deliverCode(contact, code, isPhone){
   /* Режим EmailJS */
   if(emailjsReady){
     emailjs.send(EMAIL_CONFIG.emailjs.serviceId, EMAIL_CONFIG.emailjs.templateId, {
-      to_email: contact, code: code, site: 'Навигатор диагноза'
+      to_email: contact, code: code, site: 'timtim'
     }).then(showSent).catch(() => showDemo('Ошибка отправки — код показан на экране.'));
     return;
   }
