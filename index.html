@@ -804,6 +804,7 @@ function renderSpecial(page){
     $('#page-section').innerHTML = renderAboutPage();
     return;
   }
+  /* pickLang объявлен в блоке статей */
   const isAbout = page === 'about-site';
   const title = tr(isAbout ? 'sp_about_t' : 'sp_srod_t');
   $('#page-section').innerHTML = `
@@ -853,9 +854,10 @@ function renderDashboard(d){
 
 <script>
 /* ===================== СТАТЬЯ ===================== */
+function pickLang(a){ return (a && (a[lang] || a.ru)) || a; }
 function renderArticle(d, s){
   if(typeof ARTICLES !== 'undefined' && ARTICLES[state.dir + ':' + s.id]){
-    return renderRealArticle(d, s, ARTICLES[state.dir + ':' + s.id]);
+    return renderRealArticle(d, s, pickLang(ARTICLES[state.dir + ':' + s.id]));
   }
   const tocTitles = tr('toc');
   const toc = ARTICLE_TOC.map((t,i) =>
@@ -924,8 +926,9 @@ function renderArticles(d, s){
   const topics = tr('topics');
   const cards = topics.map((t, i) => {
     const ra = (typeof TOPIC_ARTICLES !== 'undefined') && TOPIC_ARTICLES[state.dir + ':' + i];
-    const h3 = ra ? ra.title : tr('art_soon');
-    const p = ra ? (ra.intro.length > 110 ? ra.intro.slice(0, 110) + '…' : ra.intro) : trF('art_ph', {t: t.toLowerCase()});
+    const raL = ra ? pickLang(ra) : null;
+    const h3 = raL ? raL.title : tr('art_soon');
+    const p = raL ? (raL.intro.length > 110 ? raL.intro.slice(0, 110) + '…' : raL.intro) : trF('art_ph', {t: t.toLowerCase()});
     return `
     <div class="art-card" data-topic="${i}">
       <div class="art-cover"><span>${t.split(' ')[0]}</span></div>
@@ -1560,7 +1563,7 @@ function renderPostPage(d){
 /* ---------- Страница тематической статьи ---------- */
 function renderTopicPage(d){
   const ta = (typeof TOPIC_ARTICLES !== 'undefined') && TOPIC_ARTICLES[state.dir + ':' + state.topicIdx];
-  if(ta && typeof renderTopicRealPage === 'function') return renderTopicRealPage(ta);
+  if(ta && typeof renderTopicRealPage === 'function') return renderTopicRealPage(pickLang(ta));
   const idx = Number(state.topicIdx);
   const t = tr('topics')[idx];
   if(t === undefined) return `<button class="back-btn" data-back>← ${tr('back')}</button><div class="placeholder-note">${tr('not_found')}</div>`;
@@ -1629,8 +1632,9 @@ function renderSavedPage(d){
       const parts = sid.split('-'); /* topic-<dir>-<index> */
       const dir = parts[1], tIdx = parts[2];
       const ra = (typeof TOPIC_ARTICLES !== 'undefined') && TOPIC_ARTICLES[dir + ':' + tIdx];
-      const t = ra ? ra.title : T[lang].topics[tIdx];
-      return t ? {id: sid, dir, title: t, topic: '', text: ra ? ra.intro : '', topicIdx: tIdx} : null;
+      const raL = ra ? (ra[lang] || ra.ru) : null;
+      const t = raL ? raL.title : T[lang].topics[tIdx];
+      return t ? {id: sid, dir, title: t, topic: '', text: raL ? raL.intro : '', topicIdx: tIdx} : null;
     }
     const p = getPosts().find(x => String(x.id) === sid);
     return (p && p.status === 'published') ? p : null;
@@ -1794,7 +1798,7 @@ document.addEventListener('keydown', e => { if(e.key === 'Escape') $('#shareOver
    РЕАЛЬНЫЕ СТАТЬИ (материалы владельца, предоставлены 2026-11-23)
    ================================================================== */
 const ARTICLES = {
-'ras:about': {
+'ras:about': { ru: {
   intro: 'Расстройства аутистического спектра (РАС) — это особенности нейроразвития, которые могут влиять на коммуникацию, социальное взаимодействие, поведение, сенсорное восприятие и способы обработки информации. Аутизм называется спектром, потому что его проявления могут значительно отличаться у разных людей: у каждого ребёнка свои особенности, способности, трудности и потребности в поддержке.',
   parts: [
   { title: 'Как проявляется РАС?',
@@ -1827,7 +1831,71 @@ const ARTICLES = {
     ] }
   ]
 },
-'dcp:about': {
+  kz: { intro: 'Аутизм спектрінің бұзылыстары (РАС) — бұл коммуникацияға, әлеуметтік өзара әрекеттесуге, мінез-құлыққа, сенсорлық қабылдауға және ақпаратты өңдеу тәсілдеріне әсер етуі мүмкін нейродамудың ерекшеліктері. Аутизм спектр деп аталады, өйткені оның көріністері әр адамда айтарлықтай ерекшеленеді. Әр баланың өз ерекшеліктері, қабілеттері, қиындықтары және қолдау қажеттіліктері бар.',
+  parts: [
+  { title: 'РАС қалай көрінеді?',
+    blocks: [
+    { h: 'Коммуникацияның ерекшеліктері',
+      ps: ['Кейбір балаларға сөйлесу үшін сөзді пайдалану, күрделі нұсқауларды түсіну, диалогты ұстап тұру немесе өз қажеттіліктерін білдіру қиын болуы мүмкін.', 'Басқа балалар еркін сөйлей алады, бірақ контексті, мағына астындағы сөздерді немесе қарым-қатынастың ерекшеліктерін түсінуде қиындықтарға тап болуы мүмкін.'] },
+    { h: 'Әлеуметтік өзара әрекеттесудің ерекшеліктері',
+      ps: ['Әлеуметтік белгілерді түсіну, басқа балалармен қарым-қатынас, бірлескен зейін немесе үйреншікті қарым-қатынас тәсілдері саласында қиындықтар байқалуы мүмкін.', 'Сонымен қатар балалардың қарым-қатынасқа деген қалауы әртүрлі болуы мүмкін.'] },
+    { h: 'Қайталанатын мінез-құлық және қызығушылықтар',
+      ps: ['Кейбір балалар қозғалысты, әрекеттерді, сөз тіркестерін қайталайды, белгілі бір реттілікті ұнатады немесе өте терең қызығушылықтары болады.', 'Бұл олардың әлеммен өзара әрекеттесу және өзін-өзі реттеу тәсілінің бір бөлігі болуы мүмкін.'] },
+    { h: 'Сенсорлық ерекшеліктер',
+      ps: ['Бала дыбыстарға, жарыққа, иістерге, текстураларға, температураға немесе басқа сезімдерге өте сезімтал әрекет етуі мүмкін.', 'Кейбір сенсорлық сезімдер керісінше аз қарқынды немесе ерекше қабылдануы мүмкін.'] }
+    ] },
+  { title: '',
+    blocks: [
+    { h: 'Аутизм — барлық адамдарда бірдей күй емес',
+      ps: ['Бір баланың сөзі жақсы дамыған болуы мүмкін, бірақ күнделікті бейімделуде айқын қиындықтар болуы мүмкін.', 'Екіншісінде сөз шектеулі болуы мүмкін және балама коммуникацияға қажеттілік болуы мүмкін.', 'РАС бар адамдардың интеллектуалдық қабілеттері, дағдылары, қызығушылықтары және қажеттіліктері әртүрлі.'] },
+    { h: 'Аутизмнің себебі емес деп нені айтуға болады?',
+      ps: ['РАС мына себептерден туындамайды:'],
+      list: ['нашар тәрбие','ата-ананың махаббатының жетіспеушілігі','ата-ананың эмоционалдық суықтығы','вакцинация','гаджеттерді қалыпты пайдалану'],
+      tail: 'Аутизм нейродамудың ерекшеліктерімен байланысты және күрделі табиғаты бар.' },
+    { h: 'Диагноз қалай қойылады?',
+      ps: ['Диагноз бала дамуы, мінез-құлығы, коммуникациясы және басқа ерекшеліктері кешенді бағалануы негізінде білікті маманмен қойылады.', 'Бір ғана симптом немесе жеке тест РАС-ты өз бетінше анықтау үшін жеткіліксіз.'] },
+    { h: 'Балаға қалай көмектесуге болады?',
+      ps: ['Қолдау мынадай бағыттарды қамтуы мүмкін:'],
+      list: ['коммуникацияны дамыту','логопедиялық көмек','психологиялық-педагогикалық сүйемелдеу','күнделікті дағдыларды үйрету','қоршаған ортаны бейімдеу','қатар жүретін жағдайлар кезінде медициналық көмек'],
+      tail: 'Қолдау баланың қажеттіліктері мен мүмкіндіктерін ескере отырып, жеке таңдалуы тиіс.' },
+    { h: 'Негізгісі',
+      ps: ['Аутизм баланың жеке басын, қабілеттерін, қызығушылықтарын немесе болашағын анықтамайды.', 'РАС бар балалар оқи алады, дами алады, қарым-қатынаса алады, жаңа дағдылар меңгере алады және өз бетінше бола алады. Маңыздысы — баланы кез келген бағаға өзгертуге тырыспау, оның мүмкіндіктерін ашуға және қажетті қолдау алуына көмектесу.'] }
+    ] }
+  ]
+},
+  en: { intro: 'Autism Spectrum Disorders (ASD) are neurodevelopmental differences that can affect communication, social interaction, behavior, sensory perception, and the way information is processed. Autism is called a spectrum because its manifestations can vary greatly from person to person. Every child has their own characteristics, abilities, difficulties, and support needs.',
+  parts: [
+  { title: 'How does ASD manifest?',
+    blocks: [
+    { h: 'Communication differences',
+      ps: ['Some children find it difficult to use speech to communicate, understand complex instructions, sustain a conversation, or express their needs.', 'Other children may speak freely but have difficulty understanding context, subtext, or the nuances of communication.'] },
+    { h: 'Social interaction differences',
+      ps: ['Difficulties may be observed in understanding social cues, interacting with other children, joint attention, or customary ways of communicating.', 'At the same time, children\u2019s desire to communicate can vary.'] },
+    { h: 'Repetitive behavior and interests',
+      ps: ['Some children may repeat movements, actions, phrases, prefer certain sequences, or have very intense interests.', 'This can be part of their way of interacting with the world and self-regulation.'] },
+    { h: 'Sensory differences',
+      ps: ['A child may be particularly sensitive to sounds, light, smells, textures, temperature, or other sensations.', 'Some sensory sensations may, conversely, be perceived less intensely or in an unusual way.'] }
+    ] },
+  { title: '',
+    blocks: [
+    { h: 'Autism is not the same condition in everyone',
+      ps: ['One child may have well-developed speech but pronounced difficulties in everyday adaptation.', 'Another may have limited speech and a need for alternative communication.', 'Intellectual abilities, skills, interests, and needs vary among people with ASD.'] },
+    { h: 'What does not cause autism?',
+      ps: ['ASD does not arise from:'],
+      list: ['poor upbringing','lack of parental love','emotional coldness of parents','vaccination','ordinary use of gadgets'],
+      tail: 'Autism is related to features of neurodevelopment and has a complex nature.' },
+    { h: 'How is the diagnosis made?',
+      ps: ['The diagnosis is made by a qualified specialist based on a comprehensive assessment of the child\u2019s development, behavior, communication, and other characteristics.', 'A single symptom or a single test is not enough to independently determine ASD.'] },
+    { h: 'How can a child be helped?',
+      ps: ['Support may include:'],
+      list: ['developing communication','speech therapy','psychological and pedagogical support','learning everyday skills','adapting the environment','medical help for co-occurring conditions'],
+      tail: 'Support should be selected individually, taking into account the child\u2019s needs and abilities.' },
+    { h: 'The main thing',
+      ps: ['Autism does not determine a child\u2019s personality, abilities, interests, or future.', 'Children with ASD can learn, develop, communicate, acquire new skills, and become more independent. What matters is not trying to change the child at any cost, but helping them realize their potential and get the support they need.'] }
+    ] }
+  ]
+} },
+'dcp:about': { ru: {
   intro: 'Детский церебральный паралич (ДЦП) — это группа состояний, связанных с нарушением развития или повреждением мозга в раннем периоде жизни. Прежде всего они влияют на движения, мышечный тонус, координацию и положение тела. Проявления ДЦП могут быть разными: от относительно небольших двигательных трудностей до выраженных ограничений, требующих постоянной поддержки.',
   parts: [
   { title: '',
@@ -1866,7 +1934,83 @@ const ARTICLES = {
     ] }
   ]
 },
-'ras:rights': {
+  kz: { intro: 'Балалардың церебралды салсыздығы (ДЦП) — бұл ерте жаста мидың дамуының бұзылуымен немесе зақымдануымен байланысты күйлер тобы. Олар ең алдымен қозғалыстарға, бұлшықет тонусіне, координацияға және дене қалыпына әсер етеді. ДЦП көріністері әртүрлі болуы мүмкін: салыстырмалы түрде шағын қозғалыс қиындықтарынан бастап тұрақты қолдауды талап ететін айқын шектеулерге дейін.',
+  parts: [
+  { title: '',
+    blocks: [
+    { h: 'ДЦП не себепті болады?',
+      ps: ['ДЦП туғанға дейін, босану кезінде немесе ерте балалық шақта ми дамуына әсер ететін әртүрлі факторлармен байланысты болуы мүмкін.', 'Мүмкін себептер мен факторлар:'],
+      list: ['ішкі құрсақта дамудың ерекшеліктері','мезгілсіз туу','жүктіліктің белгілі бір асқынулары','ерте жаста мидың зақымдануы немесе аурулары','кейбір инфекциялар','нерв жүйесінің дамуына әсер етуі мүмкін басқа факторлар'],
+      tail: 'Кейбір жағдайларда нақты себебін анықтау мүмкін болмайды.' }
+    ] },
+  { title: 'ДЦП қандай түрлері болады?',
+    blocks: [
+    { h: 'Спастикалық түрі',
+      ps: ['Бұлшықет тонусінің жоғарылауымен, қозғалыстардың шектелуімен және координация қиындықтарымен сүйемелденуі мүмкін.'] },
+    { h: 'Дискинетикалық түрі',
+      ps: ['Еріксіз қозғалыстармен және қозғалыстарды бақылау қиындықтарымен сүйемелденуі мүмкін.'] },
+    { h: 'Атаксиялық түрі',
+      ps: ['Тепе-теңдік, координация және қозғалыс дәлдігінің бұзылуымен сүйемелденуі мүмкін.'] },
+    { h: 'Аралас түрлері',
+      ps: ['Кейбір балаларда бірнеше типтегі қозғалыс бұзылуларының көріністері біріктіріледі.'] }
+    ] },
+  { title: '',
+    blocks: [
+    { h: 'Қандай белгілер байқалуы мүмкін?',
+      ps: ['ДЦП түріне және дәрежесіне байланысты мына белгілер байқалуы мүмкін:'],
+      list: ['қозғалыстық дамудың кешігуі','басын ұстау қиындықтары','бұлшықет тонусінің ерекшеліктері','айналу, отыру немесе жүру қиындықтары','координация бұзылулары','дұрыс қалыптың ерекшеліктері','қолдарды пайдалану қиындықтары','сөз бұзылулары','кейбір балаларда жұту қиындықтары'] },
+    { h: 'ДЦП интеллектуалдық бұзылуларды білдіре ме?',
+      ps: ['Жоқ.', 'ДЦП ең алдымен қозғалыс бұзылуларымен байланысты. ДЦП бар балалардың интеллектуалдық қабілеттері мүлдем әртүрлі болуы мүмкін.', 'Кейбір балаларда қосымша даму бұзылулары болуы мүмкін, бірақ олар ДЦП-дің міндетті көрінісі емес.'] },
+    { h: 'Жағдай өзгере ала ма?',
+      ps: ['ДЦП мидың ерте даму бұзылуымен байланысты және әдетте мидың прогрессивті ауруы ретінде қарастырылмайды.', 'Алайда функционалдық мүмкіндіктер, қажеттіліктер, бұлшықеттер мен буындардың жағдайы және қозғалыстық дағдылар жастымен өзгеруі мүмкін.', 'Сондықтан балаға тұрақты медициналық бақылау маңызды.'] },
+    { h: 'ДЦП бар балаларға қалай көмектеседі?',
+      ps: ['Қолдау мынадай бағыттарды қамтуы мүмкін:'],
+      list: ['физиотерапия және емдік дене шынықтыру','логопедиялық көмек','ортопедиялық сүйемелдеу','эрготерапия','реабилитациялық техникалық құралдар','медициналық реабилитация','психологиялық қолдау','білім беру ортасын бейімдеу'],
+      tail: 'Көмек бағдарламасы баланың жағдайы мен қажеттіліктерін ескере отырып, жеке анықталады.' },
+    { h: 'Негізгісі',
+      ps: ['ДЦП баланың жеке басын, интеллектін, қабілеттерін, қызығушылықтарын немесе құндылығын анықтамайды.', 'Әр бала дамуға, білімге, медициналық көмекке, реабилитацияға, қарым-қатынасқа және қоғам өміріне толық қатысуға құқықты.', 'Ең маңыздысы — баланың қажеттіліктерін уақытында анықтау, қажетті қолдауды қамтамасыз ету және ол өз мүмкіндіктерін толық аша алатындай жағдайлар жасау.'] }
+    ] }
+  ]
+},
+  en: { intro: 'Cerebral palsy (CP) is a group of conditions associated with impaired development or damage to the brain early in life. They primarily affect movement, muscle tone, coordination, and body position. The manifestations of CP can vary: from relatively minor motor difficulties to pronounced limitations requiring constant support.',
+  parts: [
+  { title: '',
+    blocks: [
+    { h: 'What causes CP?',
+      ps: ['CP can be associated with various factors affecting brain development before birth, during delivery, or in early childhood.', 'Possible causes and factors include:'],
+      list: ['features of intrauterine development','premature birth','certain pregnancy complications','brain injuries or diseases in early age','certain infections','other factors that can affect nervous system development'],
+      tail: 'In some cases, the exact cause cannot be determined.' }
+    ] },
+  { title: 'What forms of CP exist?',
+    blocks: [
+    { h: 'Spastic form',
+      ps: ['May be accompanied by increased muscle tone, limited movements, and coordination difficulties.'] },
+    { h: 'Dyskinetic form',
+      ps: ['May be accompanied by involuntary movements and difficulties controlling movements.'] },
+    { h: 'Ataxic form',
+      ps: ['May be accompanied by impaired balance, coordination, and movement accuracy.'] },
+    { h: 'Mixed forms',
+      ps: ['In some children, manifestations of several types of motor disorders are combined.'] }
+    ] },
+  { title: '',
+    blocks: [
+    { h: 'What signs may be observed?',
+      ps: ['Depending on the form and severity of CP, the following may be observed:'],
+      list: ['delay in motor development','difficulty holding the head','features of muscle tone','difficulty with rolling over, sitting, or walking','coordination disorders','posture peculiarities','difficulty using hands','speech disorders','swallowing difficulties in some children'] },
+    { h: 'Does CP mean intellectual impairment?',
+      ps: ['No.', 'CP is primarily associated with motor disorders. Intellectual abilities in children with CP can be completely different.', 'Some children may have additional developmental disorders, but they are not an obligatory manifestation of CP.'] },
+    { h: 'Can the condition change?',
+      ps: ['CP is associated with early brain development disorder and is usually not considered a progressive brain disease.', 'However, functional abilities, needs, the state of muscles and joints, and motor skills can change with age.', 'Therefore, regular medical monitoring is important for the child.'] },
+    { h: 'How are children with CP helped?',
+      ps: ['Support may include:'],
+      list: ['physical therapy and therapeutic exercise','speech therapy','orthopedic support','ergotherapy','assistive technology devices','medical rehabilitation','psychological support','adaptation of the educational environment'],
+      tail: 'The assistance program is determined individually, taking into account the child\u2019s condition and needs.' },
+    { h: 'The main thing',
+      ps: ['CP does not determine a child\u2019s personality, intellect, abilities, interests, or worth.', 'Every child has the right to development, education, medical care, rehabilitation, communication, and full participation in society life.', 'The most important thing is to timely identify the child\u2019s needs, provide the necessary support, and create conditions in which they can maximize their potential.'] }
+    ] }
+  ]
+} },
+'ras:rights': { ru: {
   intro: 'Расстройства аутистического спектра (РАС) не ограничивают право ребёнка на образование, медицинскую помощь, социальную поддержку и участие в общественной жизни. Дети с РАС имеют те же права, что и другие дети, а государство предусматривает механизмы поддержки с учётом индивидуальных особенностей развития.',
   parts: [
   { title: 'Права детей с РАС в Казахстане',
@@ -1894,7 +2038,61 @@ const ARTICLES = {
     ] },
   ]
 },
-'ras:benefits': {
+  kz: { intro: 'Аутизм спектрінің бұзылыстары (РАС) баланың білім алуға, медициналық көмекке, әлеуметтік қолдауға және қоғамдық өмірге қатысуға деген құқығын шектемейді. РАС бар балалардың басқа балалармен бірдей құқықтары бар, ал мемлекет бала дамуының жеке ерекшеліктері мен қажеттіліктерін ескеретін қолдау механизмдерін көздейді.',
+  parts: [
+  { title: 'Қазақстандағы РАС бар балалардың құқықтары',
+    blocks: [
+    { h: 'Білім алу құқығы',
+      ps: ['РАС бар бала білім алуға құқықты.', 'Жеке қажеттіліктерге байланысты мынадай мүмкіндіктер көзделуі мүмкін:'],
+      list: ['жалпы білім беретін мектепте оқу','инклюзивті білім беру','арнайы білім беру ұйымдары','оқудың арнайы жағдайлары','психологиялық-педагогикалық сүйемелдеу','жеке білім беру тәсілдері','заңда көзделген негіздер болған жағдайда үйде оқу'],
+      tail: 'Оқу форматы баланың қажеттіліктерін, тиісті ұсыныстарды және қолданыстағы ережелерді ескере отырып анықталуы тиіс.' },
+    { h: 'Психологиялық-педагогикалық көмек құқығы',
+      ps: ['РАС балаларға логопед, дефектолог, психолог және басқа мамандардың көмегі қажет болуы мүмкін.', 'Бұл қолдау коммуникацияны дамытуға, бейімделуге, оқуға, өз бетінше болу дағдыларын қалыптастыруға және күнделікті өмірге көмектесуге бағытталған.'] },
+    { h: 'Медициналық көмек құқығы',
+      ps: ['Бала медициналық бақылауға, тексерулерге, мамандар кеңесіне және қажет болған жағдайда қатар жүретін жағдайларды емдеуге құқықты.', 'РАС баланың әдеттегі медициналық көмек алу құқығын жоймайды.'] },
+    { h: 'Реабилитация және әлеуметтік қолдау құқығы',
+      ps: ['Тиісті негіздер болған жағдайда балаға және отбасыға мынадай мүмкіндіктер берілуі мүмкін:'],
+      list: ['мүгедектігі бойынша жәрдемақы','қамқорлық жасаған тұлғаға жәрдемақы (жағдайлар сақталғанда)','реабилитация қызметтері','жеке абилитация және реабилитация бағдарламасы','техникалық және басқа қолдау құралдары','арнайы әлеуметтік қызметтер','психологиялық-педагогикалық көмек'] },
+    { h: 'Қолжетімді орта құқығы',
+      ps: ['РАС бар бала үшін қолжетімді орта — бұл тек физикалық қолжетімділік емес. Ол мынадай элементтерді қамтуы мүмкін:'],
+      list: ['түсінікті нұсқаулар','визуалды сигналдар','балама коммуникация мүмкіндігі','білім беру ортасын бейімдеу','сенсорлық ерекшеліктерді ескеру','кейбір үдерістердің болжамдылығы','іс-шараларға қатысудың қолайлы жағдайлары'] },
+    { h: 'Айырмашылықтан қорғану құқығы',
+      ps: ['РАС бар бала құрметпен қарауға, қауіпсіздікке, зорлық-зомбылықтан және айырмашылықтан қорғануға құқықты.', 'Коммуникация, мінез-құлық немесе сенсорлық қабылдаудың ерекшеліктері қорлауға, негізсіз шығар тастауға немесе заңды құқықтардан бас тартуға себеп болмауы тиіс.'] },
+    { h: 'Қайда жүгіну керек?',
+      ps: ['Ақпарат пен қолдау үшін мына мекемелерге жүгінуге болады:'],
+      list: ['емхана','ПМПК','психологиялық-педагогикалық қолдау ұйымдары','білім басқармасы','әлеуметтік қорғау органдары','ХҚКО немесе eGov арқылы','ата-аналардың қоғамдық ұйымдары'],
+      tail: 'РАС бар бала дамуының ерекшеліктері қоршаған адамдарға үйреншіктіден өзгеше болғаны үшін қолдаусыз қалмауы тиіс.' }
+    ] }
+  ]
+},
+  en: { intro: 'Autism Spectrum Disorders (ASD) do not limit a child\u2019s right to education, medical care, social support, and participation in public life. Children with ASD have the same rights as other children, while the state provides support mechanisms that take into account the individual characteristics of the child\u2019s development and needs.',
+  parts: [
+  { title: 'Rights of children with ASD in Kazakhstan',
+    blocks: [
+    { h: 'The right to education',
+      ps: ['A child with ASD has the right to receive an education.', 'Depending on individual needs, the following may be provided:'],
+      list: ['education in a mainstream school','inclusive education','special educational organizations','special learning conditions','psychological and pedagogical support','individual educational approaches','home schooling where there are legal grounds'],
+      tail: 'The format of education should be determined taking into account the child\u2019s needs, relevant recommendations, and current rules.' },
+    { h: 'The right to psychological and pedagogical assistance',
+      ps: ['Children with ASD may need help from a speech therapist, defectologist, psychologist, and other specialists.', 'Such support is aimed at developing communication, adaptation, learning, forming independence skills, and helping in everyday life.'] },
+    { h: 'The right to medical care',
+      ps: ['The child has the right to medical monitoring, examinations, consultations with specialists, and treatment of co-occurring conditions when necessary.', 'ASD does not cancel the child\u2019s right to ordinary medical care.'] },
+    { h: 'The right to rehabilitation and social support',
+      ps: ['When there are appropriate grounds, the child and family may be provided with:'],
+      list: ['disability benefits','benefit for the caregiver, subject to conditions','rehabilitation services','individual habilitation and rehabilitation program','assistive technology and other means of support','special social services','psychological and pedagogical assistance'] },
+    { h: 'The right to an accessible environment',
+      ps: ['An accessible environment for a child with ASD is not only physical accessibility. It may include:'],
+      list: ['clear instructions','visual cues','opportunities for alternative communication','adaptation of the educational environment','consideration of sensory features','predictability of certain processes','reasonable conditions for participating in events'] },
+    { h: 'The right to protection from discrimination',
+      ps: ['A child with ASD has the right to respectful treatment, safety, and protection from violence and discrimination.', 'Features of communication, behavior, or sensory perception should not become a reason for humiliation, unjustified exclusion, or denial of legal rights.'] },
+    { h: 'Where to apply?',
+      ps: ['For information and support, you can contact:'],
+      list: ['the clinic','the PMPK (psychological-medical-pedagogical consultation)','psychological and pedagogical support organizations','the department of education','social protection authorities','the CSC or via eGov','public organizations of parents'],
+      tail: 'A child with ASD should not be left without support just because their developmental features differ from what is familiar to those around them.' }
+    ] }
+  ]
+} },
+'ras:benefits': { ru: {
   intro: 'Расстройства аутистического спектра могут сопровождаться различными потребностями в обучении, коммуникации, повседневной жизни и поддержке. При установлении инвалидности семьи детей с РАС могут иметь право на пособия, реабилитационные услуги, психолого-педагогическую поддержку и другие меры помощи.',
   parts: [
   { title: 'Льготы для детей с РАС в Казахстане — 2026 год',
@@ -1928,7 +2126,71 @@ const ARTICLES = {
     ] }
   ]
 },
-'dcp:rights': {
+  kz: { intro: 'Аутизм спектрінің бұзылыштары оқу, коммуникация, күнделікті өмір және қолдау саласында әртүрлі қажеттіліктермен сүйемелденуі мүмкін. Мүгедектік белгіленген кезде РАС отбылары жәрдемақыларға, реабилитациялық қызметтерге, психологиялық-педагогикалық қолдауға және басқа көмек шараларына құқылы болуы мүмкін.',
+  parts: [
+  { title: 'Қазақстандағы РАС балаларға арналған жеңілдіктер — 2026 жыл',
+    blocks: [
+    { h: 'Мүгедектігі бар балаға мемлекеттік жәрдемақы',
+      ps: ['Жәрдемақы мөлшері жасқа және белгіленген мүгедектік санатына байланысты. 2026 жылға айтылған мөлшерлер бойынша:'],
+      list: ['7 жасқа дейін — 81 871 теңге','7–18 жас, I топ — 111 873 теңге','7–18 жас, II топ — 93 058 теңге','7–18 жас, III топ — 81 871 теңге'],
+      important: 'Жәрдемақы мөлшерлері өзгеруі мүмкін — рәсімдейтын алдында нақты соманы ресми дереккөздермен (egov.kz, ХҚКО) тексеріңіз.' },
+    { h: 'Қамқорлық жасаған тұлғаға жәрдемақы',
+      ps: ['Мүгедектігі бар балаға қамқорлық жасаған адамдарға, тағайындау жағдайлары сақталған кезде, жәрдемақы көзделген. 2026 жылға айтылған сома — айына 81 871 теңге.'],
+      important: 'Нақты соманы және талаптарды рәсімдейтын алдында нақтылап алу қажет.' },
+    { h: 'Реабилитациялық және дамыту қызметтері',
+      ps: ['Жеке қажеттіліктерге байланысты балаға әртүрлі қолдау түрлері қолжетімді болуы мүмкін:'],
+      list: ['логопедиялық көмек','дефектологпен жұмыс','психологиялық-педагогикалық қолдау','коммуникацияны дамыту','күнделікті дағдыларды үйрету','реабилитациялық шаралар'],
+      tail: 'Нақты қызметтердің қолжетімділігі бағдарламаға, мекемеге, жеке ұсыныстарға және ұсыну жағдайларына байланысты.' },
+    { h: 'Жеке абилитация және реабилитация бағдарламасы',
+      ps: ['ИПАР мүгедектігі бар балаға қажетті шараларды, техникалық құралдарды және қызметтерді көздеуі мүмкін.', 'Бағдарлама жеке қажеттіліктерді және белгіленген рәсімді ескере отырып жасалады.'] },
+    { h: 'Техникалық құралдар және қызметтер',
+      ps: ['Тиісті көрсеткіштер мен жағдайлар болған кезде реабилитацияның техникалық құралдары және басқа қолдау құралдары ұсынылуы мүмкін.', 'Нақты құралдар мәселесі жеке шешіледі.'] },
+    { h: 'Білім берудегі қолдау',
+      ps: ['РАС бар бала білім алуға және тиісті қажеттіліктер болған кезде арнайы жағдайларға құқықты. Көзделуі мүмкін:'],
+      list: ['психологиялық-педагогикалық сүйемелдеу','арнайы білім беру жағдайлары','жеке тәсіл','оқу материалдарын бейімдеу','мамандар көмегі'] },
+    { h: 'Әлеуметтік қызметтер',
+      ps: ['Бала мен отбасының қажеттіліктеріне байланысты арнайы әлеуметтік қызметтер, сүйемелдеу және басқа көмек түрлері қолжетімді болуы мүмкін.'] },
+    { h: 'Қосымша шаралар',
+      ps: ['Жеке жағдайларда салықтық шегерімдер, жергілікті әлеуметтік бағдарламалар, көліктік қолдау және басқа шаралар қолжетімді болуы мүмкін.'] },
+    { h: 'Қайда жүгіну керек?',
+      list: ['емхана','ХҚКО','eGov','әлеуметтік қорғау органдары','ПМПК','білім басқармасы','психологиялық-педагогикалық қолдау ұйымдары'],
+      important: 'Маңызды: РАС өзі бойынша мүгедектіктің немесе барлық жеңілдіктердің автоматты түрде тағайындалуын білдірмейді. Қолдау алу мүмкіндігі қолданыстағы ережелермен және жеке мән-жайлармен анықталады.' }
+    ] }
+  ]
+},
+  en: { intro: 'Autism spectrum disorders can be accompanied by various needs in learning, communication, daily life, and support. When disability is established, families of children with ASD may be entitled to benefits, rehabilitation services, psychological and pedagogical support, and other forms of assistance.',
+  parts: [
+  { title: 'Benefits for children with ASD in Kazakhstan — 2026',
+    blocks: [
+    { h: 'State benefit for a child with a disability',
+      ps: ['The amount of the benefit depends on age and the established disability category. According to the amounts cited for 2026:'],
+      list: ['under 7 years — 81,871 tenge','7 to 18 years, group I — 111,873 tenge','7 to 18 years, group II — 93,058 tenge','7 to 18 years, group III — 81,871 tenge'],
+      important: 'Benefit amounts may change — before applying, verify the current amounts with official sources (egov.kz, CSC).' },
+    { h: 'Benefit for the person providing care',
+      ps: ['A benefit is provided for persons caring for a child with a disability, subject to the conditions of appointment. The amount cited for 2026 was 81,871 tenge per month.'],
+      important: 'The current amount and requirements should be clarified before applying.' },
+    { h: 'Rehabilitation and developmental services',
+      ps: ['Depending on individual needs, the child may have access to various types of support:'],
+      list: ['speech therapy assistance','sessions with a defectologist','psychological and pedagogical support','development of communication','learning everyday skills','rehabilitation activities'],
+      tail: 'The availability of specific services depends on the program, institution, individual recommendations, and conditions of provision.' },
+    { h: 'Individual habilitation and rehabilitation program',
+      ps: ['The IHRP (individual program) may provide for the necessary activities, assistive devices, and services for a child with a disability.', 'The program is drawn up taking into account individual needs and the established procedure.'] },
+    { h: 'Assistive devices and services',
+      ps: ['Where there are appropriate indications and conditions, assistive technology and other means of support may be provided.', 'The question of specific devices is determined individually.'] },
+    { h: 'Support in education',
+      ps: ['A child with ASD has the right to education and special conditions when there are appropriate needs. The following may be provided:'],
+      list: ['psychological and pedagogical support','special educational conditions','individual approach','adaptation of learning materials','help from specialists'] },
+    { h: 'Social services',
+      ps: ['Depending on the needs of the child and family, special social services, support, and other forms of assistance may be available.'] },
+    { h: 'Additional measures',
+      ps: ['In individual cases, tax deductions, local social programs, transport support, and other measures may be available.'] },
+    { h: 'Where to apply?',
+      list: ['clinic','CSC','eGov','social protection authorities','PMPK','department of education','psychological and pedagogical support organizations'],
+      important: 'Important: ASD by itself does not mean automatic assignment of disability or all the listed benefits. The possibility of receiving support is determined by current rules and individual circumstances.' }
+    ] }
+  ]
+} },
+'dcp:rights': { ru: {
   intro: 'Детский церебральный паралич (ДЦП) не лишает ребёнка права на полноценную жизнь, образование, медицинскую помощь, общение и участие в обществе. В Казахстане права детей с инвалидностью защищаются законодательством, а государство предусматривает различные меры поддержки для детей и их семей.',
   parts: [
   { title: 'Права детей с ДЦП в Казахстане',
@@ -1955,7 +2217,59 @@ const ARTICLES = {
     ] },
   ]
 },
-'dcp:benefits': {
+  kz: { intro: 'Балалардың церебралды салсыздығы (ДЦП) баланың толық өмір сүру, білім алу, медициналық көмек алу, қарым-қатынас және қоғамға қатысу құқығынан айырмайды. Қазақстанда мүгедектігі бар балалардың құқықтары заңмен қорғалады, ал мемлекет балалар мен олардың отбыларына әртүрлі қолдау шараларын көздейді.',
+  parts: [
+  { title: 'Қазақстандағы ДЦП бар балалардың құқықтары',
+    blocks: [
+    { h: 'Білім алу құқығы',
+      ps: ['Әр бала денсаулық ерекшеліктеріне қарамастан білім алуға құқықты.', 'Баланың қажеттіліктеріне және тиісті мамандардың қорытындыларына байланысты мынадай мүмкіндіктер болуы мүмкін:'],
+      list: ['қалыпты мектепте оқу','инклюзивті білім беру','арнайы білім беру ұйымдарында оқу','жеке білім беру жағдайлары','заңда көзделген негіздер болған жағдайда үйде оқу','психологиялық-педагогикалық сүйемелдеу мамандарының көмегі'],
+      tail: 'Білім беру ұйымы баланың жеке қажеттіліктерін ескеруі және заңмен көзделген жағдайларды жасауы тиіс.' },
+    { h: 'Медициналық көмек құқығы',
+      ps: ['ДЦП бар балалар медициналық көмекке, мамандардың бақылауына, тексерулерге, емдеуге және медициналық көрсеткіштерге сәйкес реабилитациялық шараларға құқықты.', 'Ата-аналар емханаға, бағытты дәрігерлерге және арнайы медициналық мекемелерге жүгіне алады.'] },
+    { h: 'Реабилитация құқығы',
+      ps: ['Реабилитация физиотерапия, емдік дене шынықтыру, логопедиялық көмек, ортопедиялық сүйемелдеу және функционалдық дағдыларды дамытуға, өмір сапасын жақсартуға бағытталған басқа шараларды қамтуы мүмкін.', 'Баланың қажеттіліктеріне және белгіленген жағдайларға байланысты реабилитацияның техникалық құралдары мен қызметтері ұсынылуы мүмкін.'] },
+    { h: 'Әлеуметтік қолдау құқығы',
+      ps: ['Балаға мүгедектік белгіленген кезде оған және оның отбасына заңмен көзделген қолдау шаралары, соның ішінде мынадай мүмкіндіктер берілуі мүмкін:'],
+      list: ['жәрдемақылар','әлеуметтік қызметтер','реабилитацияның техникалық құралдары','жеке абилитация және реабилитация бағдарламасы','қамқорлық ұйымдастыруға көмек','тиісті негіздер болған кезде басқа қолдау шаралары'] },
+    { h: 'Қолжетімді орта құқығы',
+      ps: ['Бала қоғамдық мекемелерге, білімге, медициналық ұйымдарға, мәдени және қоғамдық кеңістіктерге қол жеткізуге құқықты.', 'Қолжетімді орта физикалық кедергілерді жоюды, қозғалыс және қызметтерді алу мүмкіндігін, адамның қажеттіліктерін ескеруді білдіреді.'] },
+    { h: 'Құрмет және айырмашылықтан қорғану құқығы',
+      ps: ['ДЦП бар баланың басқа балалар сияқты өзіндік қадір-қасиеті, құқықтары және бостандықтары бар.', 'Мүгедектіктің болуы қорлауға, қоғамдық өмірден шығар тастауға, құқықтардың негізсіз шектелуіне немесе заңмен көзделген қызметтерден бас тартуға негіз болмауы тиіс.'] },
+    { h: 'Қайдан көмек сұрауға болады?',
+      ps: ['Ата-аналар мына мекемелерге жүгіне алады:'],
+      list: ['тіркелген емхана','әлеуметтік қорғау органдары','білім басқармасы','ПМПК','ХҚКО немесе eGov арқылы','арнайы реабилитациялық ұйымдар','отбылерге қолдау көрсететін қоғамдық ұйымдар'],
+      tail: 'ДЦП бар баланың құқықтары — бұл жеке артықшылықтар емес, оның қажеттіліктерін ескере отырып қамтамасыз етуге тиіс заңды құқықтар.' }
+    ] }
+  ]
+},
+  en: { intro: 'Cerebral palsy (CP) does not deprive a child of the right to a full life, education, medical care, communication, and participation in society. In Kazakhstan, the rights of children with disabilities are protected by law, and the state provides various measures of support for children and their families.',
+  parts: [
+  { title: 'Rights of children with CP in Kazakhstan',
+    blocks: [
+    { h: 'The right to education',
+      ps: ['Every child has the right to education regardless of health characteristics.', 'Depending on the child\u2019s needs and the conclusions of relevant specialists, the following may be available:'],
+      list: ['education in a regular school','inclusive education','education in special educational organizations','individual educational conditions','home schooling where there are legal grounds','help from psychological and pedagogical support specialists'],
+      tail: 'The educational organization must take into account the child\u2019s individual needs and create the conditions provided by law.' },
+    { h: 'The right to medical care',
+      ps: ['Children with CP have the right to medical care, specialist monitoring, examinations, treatment, and rehabilitation measures in accordance with medical indications.', 'Parents can apply to the clinic, specialized doctors, and specialized medical institutions.'] },
+    { h: 'The right to rehabilitation',
+      ps: ['Rehabilitation may include physical therapy, therapeutic exercise, speech therapy, orthopedic support, and other measures aimed at developing functional skills and improving quality of life.', 'Depending on the child\u2019s needs and established conditions, assistive technology devices and services may be provided.'] },
+    { h: 'The right to social support',
+      ps: ['When disability is established, the child and their family may be provided with support measures provided by law, including:'],
+      list: ['benefits','social services','assistive technology devices','individual habilitation and rehabilitation program','help in organizing care','other support measures where there are appropriate grounds'] },
+    { h: 'The right to an accessible environment',
+      ps: ['The child has the right to access public institutions, education, medical organizations, and cultural and public spaces.', 'An accessible environment implies removing physical barriers, the ability to move and receive services taking into account the person\u2019s needs.'] },
+    { h: 'The right to respect and protection from discrimination',
+      ps: ['A child with CP has the same dignity, rights, and freedoms as other children.', 'Having a disability is not a ground for humiliation, exclusion from public life, unjustified restriction of rights, or refusal of services provided by law.'] },
+    { h: 'Where to seek help?',
+      ps: ['Parents can contact:'],
+      list: ['the clinic at their place of registration','social protection authorities','the department of education','PMPK','CSC or via eGov','specialized rehabilitation organizations','public organizations supporting families'],
+      tail: 'The rights of a child with CP are not privileges, but legal rights that must be ensured taking into account their needs.' }
+    ] }
+  ]
+} },
+'dcp:benefits': { ru: {
   intro: 'Семьи, воспитывающие детей с ДЦП, при установлении инвалидности могут иметь право на государственные пособия, социальные услуги, реабилитационные мероприятия и другие меры поддержки. Набор доступных льгот зависит от возраста ребёнка, установленной категории инвалидности, индивидуальных потребностей и действующих нормативных требований.',
   parts: [
   { title: 'Льготы для детей с ДЦП в Казахстане — 2026 год',
@@ -1988,7 +2302,69 @@ const ARTICLES = {
     ] }
   ]
 },
-'ras:disability': {
+  kz: { intro: 'ДЦП бар балаларды тәрбиелеп отырған отбылер, мүгедектік белгіленген кезде, мемлекеттік жәрдемақыларға, әлеуметтік қызметтерге, реабилитациялық шараларға және басқа қолдау шараларына құқылы болуы мүмкін. Жеңілдіктер тізбесі баланың жасына, белгіленген мүгедектік санатына, жеке қажеттіліктеріне және қолданыстағы нормативтік талаптарға байланысты.',
+  parts: [
+  { title: 'Қазақстандағы ДЦП балаларға арналған жеңілдіктер — 2026 жыл',
+    blocks: [
+    { h: 'Мүгедектігі бар балаға мемлекеттік жәрдемақы',
+      ps: ['Қазақстанда жәрдемақы мөлшері жасқа және белгіленген мүгедектік санатына байланысты. 2026 жылға айтылған мөлшерлер бойынша:'],
+      list: ['7 жасқа дейін — 81 871 теңге','7–18 жас, I топ — 111 873 теңге','7–18 жас, II топ — 93 058 теңге','7–18 жас, III топ — 81 871 теңге'],
+      important: 'Рәсімдейтын алдында мөлшерлерді ресми дереккөздермен тексеру қажет.' },
+    { h: 'Қамқорлық жасаған тұлғаға жәрдемақы',
+      ps: ['Қазақстанда мүгедектігі бар балаға қамқорлық жасаған адамдарға, белгіленген жағдайлар сақталған кезде, жәрдемақы көзделген.', '2026 жылға айтылған сома — айына 81 871 теңге.'],
+      important: 'Нақты мөлшер мен тағайындау талаптарын рәсімдейтын алдында тексеру қажет.' },
+    { h: 'Реабилитацияның техникалық құралдары',
+      ps: ['Жеке абилитация және реабилитация бағдарламасына және белгіленген критерийлерге байланысты балаға техникалық құралдар ұсынылуы мүмкін. Мысалы:'],
+      list: ['мүгедектігі бар адамдар арбалары','ортопедиялық бұйымдар','қозғалыс құралдары','күнделікті бейімделуге арналған арнайы құралдар','жеке бағдарламамен көзделген басқа құралдар'] },
+    { h: 'Реабилитация',
+      ps: ['ДЦП бар балалар, тиісті негіздер мен қолжетімді бағдарламалар болған кезде, мемлекеттік және басқа ұйымдардан реабилитациялық қызметтер ала алады.', 'Реабилитация мынадай элементтерді қамтуы мүмкін:'],
+      list: ['емдік дене шынықтыру','физиотерапия','логопедиялық көмек','ортопедиялық сүйемелдеу','эрготерапия','басқа медициналық және реабилитациялық шаралар'] },
+    { h: 'Жеке абилитация және реабилитация бағдарламасы',
+      ps: ['ИПАР мүгедектігі бар адамның жеке қажеттіліктерін ескере отырып ұсынылатын шараларды, қызметтерді және техникалық құралдарды айқындайды.', 'Бағдарлама көзделген қызметтер мен қолдау құралдарын алу үшін пайдаланылуы мүмкін.'] },
+    { h: 'Әлеуметтік қызметтер',
+      ps: ['Отбасының қажеттіліктеріне және белгіленген критерийлерге байланысты арнайы әлеуметтік қызметтер, әлеуметтік жұмыскер көмегі және басқа қолдау түрлері қолжетімді болуы мүмкін.'] },
+    { h: 'Білім берудегі қолдау',
+      ps: ['Балаға арнайы білім беру жағдайлары, психологиялық-педагогикалық сүйемелдеу, оқу үдерісін бейімдеу және қажеттіліктер мен белгіленген ережелерге сәйкес басқа шаралар ұсынылуы мүмкін.'] },
+    { h: 'Қосымша қолдау шаралары',
+      ps: ['Жеке жағдайларда салықтық шегерімдер, көліктік қолдау, жергілікті бағдарламалар және басқа шаралар көзделуі мүмкін.', 'Олардың болуы нақты жағдайларға, заңнамаға және жергілікті органдардың шешімдеріне байланысты.'] },
+    { h: 'Қайда жүгіну керек?',
+      list: ['ХҚКО','eGov','әлеуметтік қорғау органдары','емхана','білім басқармасы','реабилитациялық ұйымдар'],
+      important: 'Маңызды: мүгедектік және қолжетімді қолдау шаралары қолданыстағы рәсімдерге сәйкес рәсімделеді. ДЦП диагнозының болуы өзі бойынша барлық аталған қызметтердің автоматты түрде тағайындалуын білдірмейді.' }
+    ] }
+  ]
+},
+  en: { intro: 'Families raising children with cerebral palsy (CP), when disability is established, may be entitled to state benefits, social services, rehabilitation activities, and other support measures. The set of available benefits depends on the child\u2019s age, established disability category, individual needs, and current normative requirements.',
+  parts: [
+  { title: 'Benefits for children with CP in Kazakhstan — 2026',
+    blocks: [
+    { h: 'State benefit for a child with a disability',
+      ps: ['In Kazakhstan, the benefit amount depends on age and the established disability category. According to the amounts cited for 2026:'],
+      list: ['under 7 years — 81,871 tenge','7 to 18 years, group I — 111,873 tenge','7 to 18 years, group II — 93,058 tenge','7 to 18 years, group III — 81,871 tenge'],
+      important: 'Before applying, the amounts must be re-verified against official sources.' },
+    { h: 'Benefit for the person providing care',
+      ps: ['Kazakhstan provides a benefit for persons caring for a child with a disability, subject to the established conditions.', 'The amount cited for 2026 was 81,871 tenge per month.'],
+      important: 'The current amount and conditions of appointment must be verified before applying.' },
+    { h: 'Assistive technology devices',
+      ps: ['Depending on the individual habilitation and rehabilitation program and established criteria, the child may be provided with assistive devices. For example:'],
+      list: ['wheelchairs','orthopedic products','mobility aids','special devices for everyday adaptation','other devices provided for by the individual program'] },
+    { h: 'Rehabilitation',
+      ps: ['Children with CP can receive rehabilitation services in state and other organizations, subject to appropriate grounds and available programs.', 'Rehabilitation may include:'],
+      list: ['therapeutic exercise','physical therapy','speech therapy assistance','orthopedic support','ergotherapy','other medical and rehabilitation activities'] },
+    { h: 'Individual habilitation and rehabilitation program',
+      ps: ['The IHRP determines the recommended activities, services, and assistive devices taking into account the individual needs of the person with a disability.', 'The program can be used to obtain the services and means of support provided for.'] },
+    { h: 'Social services',
+      ps: ['Depending on the needs of the family and established criteria, special social services, help from a social worker, and other forms of support may be available.'] },
+    { h: 'Support in education',
+      ps: ['The child may be provided with special educational conditions, psychological and pedagogical support, adaptation of the learning process, and other measures in accordance with needs and established rules.'] },
+    { h: 'Additional support measures',
+      ps: ['In individual cases, tax deductions, transport support, local programs, and other measures may be provided.', 'Their availability depends on specific conditions, legislation, and decisions of local authorities.'] },
+    { h: 'Where to apply?',
+      list: ['CSC','eGov','social protection authorities','clinic','department of education','rehabilitation organizations'],
+      important: 'Important: disability and available support measures are processed in accordance with current procedures. Having a CP diagnosis by itself does not mean automatic assignment of all the listed services.' }
+    ] }
+  ]
+} },
+'ras:disability': { ru: {
   intro: 'Расстройства аутистического спектра могут сопровождаться различными трудностями в коммуникации, адаптации, обучении, самостоятельности и повседневной жизни. В Казахстане оформление инвалидности осуществляется в установленном порядке через медицинскую организацию и медико-социальную экспертизу (МСЭ).',
   parts: [
   { title: 'Как оформить инвалидность ребёнку с РАС в Казахстане',
@@ -2018,7 +2394,65 @@ const ARTICLES = {
     ] }
   ]
 },
-'dcp:disability': {
+  kz: { intro: 'Аутизм спектрінің бұзылыстары коммуникация, бейімделу, оқу, өз бетінше болу және күнделікті өмір саласында әртүрлі қиындықтармен сүйемелденуі мүмкін. Қазақстанда мүгедектік рәсімдеу медициналық ұйым және медициналық-әлеуметтік сараптама (МӘС) арқылы белгіленген тәртіпте жүргізіледі.',
+  parts: [
+  { title: 'Қазақстандағы РАС бар балаға мүгедектікті қалай рәсімдеу керек',
+    blocks: [
+    { h: '1-қадам. Емханаға жүгініңіз',
+      ps: ['Алғашқы қадам — әдетте тіркелген емханаға жүгіну.', 'Дәрігер баланың жағдайын зерделейді, медициналық құжаттарды қарайды және қажет болған жағдайда бағытты мамандар консультациясына жібереді.'] },
+    { h: '2-қадам. Қажетті тексерулерден өтіңіз',
+      ps: ['Жағдайға байланысты мына қажеттіліктер туындауы мүмкін:'],
+      list: ['балалар психиатрының консультациясы','неврологтың консультациясы','медициналық көрсеткіштер бойынша тексерулер','баланың функционалдық ерекшеліктерін бағалау','басқа консультациялар'],
+      tail: 'Тізбе жеке анықталады.' },
+    { h: '3-қадам. Дәрігерлік комиссияның қарауы',
+      ps: ['Қажетті тексерулерден кейін МӘС-ке жіберу мәселесі медициналық ұйыммен белгіленген тәртіпте қаралады.', 'Негіздер болған кезде тиісті жолдама рәсімделеді.'] },
+    { h: '4-қадам. МӘС-тен өту',
+      ps: ['Медициналық-әлеуметтік сараптама баланың жағдайын, өмірде шектеулерін, қолдау қажеттілігін және басқа көзделген критерийлерді бағалайды.', 'Нәтижелер бойынша мүгедектік белгіленуі мүмкін.'] },
+    { h: 'Қандай санаттар белгіленеді?',
+      ps: ['Қазақстанда:'],
+      list: ['7 жасқа дейін «мүгедектігі бар бала» санаты белгіленеді','7–18 жас аралығында I, II немесе III топтар критерийлерге сәйкес белгіленеді'] },
+    { h: 'Мүгедектік белгіленгеннен кейін нені рәсімдеуге болады?',
+      ps: ['Жағдайларға байланысты мына мүмкіндіктер болуы мүмкін:'],
+      list: ['мемлекеттік жәрдемақы','қамқорлық жасаған тұлғаға жәрдемақы','жеке абилитация және реабилитация бағдарламасы','реабилитациялық қызметтер','техникалық құралдар','арнайы әлеуметтік қызметтер','психологиялық-педагогикалық қолдау'] },
+    { h: 'Қандай құжаттар қажет болуы мүмкін?',
+      ps: ['Қолданыстағы тәртіпке байланысты мынадай құжаттар талап етілуі мүмкін:'],
+      list: ['жеке тұлғаны растайтын құжаттар','медициналық құжаттар','мамандардың қорытындылары','тексеру нәтижелері','МӘС-ке жолдама','рәсіммен көзделген басқа құжаттар'] },
+    { h: 'Қайда жүгіну керек?',
+      list: ['емхана','ХҚКО','eGov','әлеуметтік қорғау органдары','бағытты ұйымдар'],
+      important: 'Маңызды: РАС диагнозы өзі бойынша мүгедектіктің автоматты түрде берілуін білдірмейді. Шешім бағалау нәтижелері бойынша, қолданыстағы критерийлерге сәйкес қабылданады.' }
+    ] }
+  ]
+},
+  en: { intro: 'Autism spectrum disorders can be accompanied by various difficulties in communication, adaptation, learning, independence, and daily life. In Kazakhstan, disability registration is carried out in the established order through a medical organization and the medical-social expertise (MSE).',
+  parts: [
+  { title: 'How to obtain disability status for a child with ASD in Kazakhstan',
+    blocks: [
+    { h: 'Step 1. Apply to the clinic',
+      ps: ['The first step is usually to apply to the clinic at your place of registration.', 'The doctor assesses the child\u2019s condition, reviews medical documents, and if necessary refers to consultations with specialized specialists.'] },
+    { h: 'Step 2. Undergo necessary examinations',
+      ps: ['Depending on the situation, the following may be needed:'],
+      list: ['consultation with a child psychiatrist','consultation with a neurologist','examinations based on medical indications','assessment of the child\u2019s functional features','other consultations'],
+      tail: 'The list is determined individually.' },
+    { h: 'Step 3. Review by the medical commission',
+      ps: ['After the necessary examinations, the issue of referral to MSE is considered by the medical organization in the established order.', 'If there are grounds, the appropriate referral is issued.'] },
+    { h: 'Step 4. Undergoing the MSE',
+      ps: ['The medical-social expertise assesses the child\u2019s condition, limitations in life activities, need for support, and other established criteria.', 'Based on the results, disability may be established.'] },
+    { h: 'What categories are established?',
+      ps: ['In Kazakhstan:'],
+      list: ['under 7 years, the category "child with a disability" is established','from 7 to 18 years, groups I, II, or III are established according to criteria'] },
+    { h: 'What can be arranged after disability is established?',
+      ps: ['Depending on conditions, the following may be available:'],
+      list: ['state benefit','benefit for the caregiver','individual habilitation and rehabilitation program','rehabilitation services','assistive devices','special social services','psychological and pedagogical support'] },
+    { h: 'What documents may be needed?',
+      ps: ['Depending on the current procedure, the following may be required:'],
+      list: ['identity documents','medical documents','specialists\u2019 conclusions','examination results','referral to MSE','other documents provided for by the procedure'] },
+    { h: 'Where to apply?',
+      list: ['clinic','CSC','eGov','social protection authorities','specialized organizations'],
+      important: 'Important: an ASD diagnosis by itself does not mean automatic assignment of disability. The decision is made based on assessment results in accordance with current criteria.' }
+    ] }
+  ]
+} },
+'dcp:disability': { ru: {
   intro: 'Оформление инвалидности ребёнку с детским церебральным параличом осуществляется через медицинскую оценку и процедуру медико-социальной экспертизы (МСЭ). Сам диагноз ДЦП не означает автоматического присвоения инвалидности: учитываются состояние ребёнка, ограничения жизнедеятельности, необходимость поддержки и предусмотренные законодательством критерии.',
   parts: [
   { title: 'Как оформить инвалидность ребёнку с ДЦП в Казахстане',
@@ -2048,7 +2482,65 @@ const ARTICLES = {
     ] }
   ]
 },
-'ras:rehab': {
+  kz: { intro: 'ДЦП бар балаға мүгедектік рәсімдеу медициналық бағалау және медициналық-әлеуметтік сараптама (МӘС) рәсімі арқылы жүзеге асырылады. ДЦП диагнозы өзі бойынша мүгедектіктің автоматты берілуін білдірмейді: баланың жағдайы, өмірде шектеулері, қолдау қажеттілігі және заңнамамен көзделген критерийлер ескеріледі.',
+  parts: [
+  { title: 'Қазақстандағы ДЦП бар балаға мүгедектікті қалай рәсімдеу керек',
+    blocks: [
+    { h: '1-қадам. Емханаға жүгіну',
+      ps: ['Ата-аналар тіркелген емханаға жүгінуі қажет.', 'Емдеуші дәрігер баланың жағдайын бағалайды, медициналық құжаттарды зерделейді және қажет болған жағдайда тексерулер мен бағытты мамандар консультациясына жібереді.'] },
+    { h: '2-қадам. Медициналық тексерулер',
+      ps: ['Мына консультациялар қажет болуы мүмкін:'],
+      list: ['балалар неврологы','ортопед','реабилитолог','медициналық көрсеткіштер бойынша басқа мамандар'],
+      tail: 'Тексерулер тізбесі жеке анықталады.' },
+    { h: '3-қадам. Дәрігерлік комиссия',
+      ps: ['Қажетті тексеруден кейін МӘС-ке жіберу мәселесі медициналық ұйыммен белгіленген тәртіпте қаралады.', 'Негіздер болған кезде МӘС-ке жолдама рәсімделеді.'] },
+    { h: '4-қадам. Медициналық-әлеуметтік сараптама',
+      ps: ['МӘС баланың жағдайын, өмірде шектеулерін, әлеуметтік қолдау қажеттілігін және басқа көзделген критерийлерді бағалайды.', 'Сараптама нәтижелері бойынша мүгедектік белгіленуі және тиісті қолдау шаралары айқындалуы мүмкін.'] },
+    { h: 'Балаларға қандай санаттар белгіленеді?',
+      ps: ['Қазақстанда:'],
+      list: ['7 жасқа дейінгі балаларға «мүгедектігі бар бала» санаты белгіленеді','7–18 жас аралығында I, II немесе III мүгедектік топтары критерийлерге сәйкес белгіленеді'] },
+    { h: 'Рәсімдегеннен кейін не істеу керек?',
+      ps: ['Мүгедетік белгіленгеннен кейін ата-аналар мына мәселелерді нақтылай алады:'],
+      list: ['жәрдемақы тағайындау тәртібі','қамқорлық жасаған тұлғаға жәрдемақы рәсімдеу мүмкіндігі','ИПАР рәсімдеу','реабилитация техникалық құралдарының қолжетімділігі','реабилитациялық қызметтер','әлеуметтік қызметтер','білім берудегі қолдау'] },
+    { h: 'Қандай құжаттар қажет болуы мүмкін?',
+      ps: ['Тізбе қолданыстағы тәртіппен анықталады, бірақ мынадай құжаттарды қамтуы мүмкін:'],
+      list: ['жеке тұлғаны растайтын құжаттар','медициналық құжаттар','тексеру нәтижелері','МӘС-ке жолдама','рәсіммен көзделген басқа құжаттар'] },
+    { h: 'Қайда жүгіну керек?',
+      list: ['тіркелген емхана','ХҚКО','eGov','әлеуметтік қорғау органдары'],
+      tail: 'Нақты құжаттар тізбесі мен МӘС-тен өту тәртібін рәсімдеуден бұрын емханада нақтылау ұсынылады.' }
+    ] }
+  ]
+},
+  en: { intro: 'Obtaining disability status for a child with cerebral palsy is carried out through a medical assessment and the medical-social expertise (MSE) procedure. A CP diagnosis by itself does not mean automatic assignment of disability: the child\u2019s condition, limitations in life activities, need for support, and criteria provided by law are taken into account.',
+  parts: [
+  { title: 'How to obtain disability status for a child with CP in Kazakhstan',
+    blocks: [
+    { h: 'Step 1. Apply to the clinic',
+      ps: ['Parents need to apply to the clinic at their place of registration.', 'The attending doctor assesses the child\u2019s condition, reviews medical documents, and if necessary refers to examinations and consultations with specialized specialists.'] },
+    { h: 'Step 2. Medical examinations',
+      ps: ['Consultations may be required with:'],
+      list: ['a pediatric neurologist','an orthopedist','a rehabilitation specialist','other specialists based on medical indications'],
+      tail: 'The list of examinations is determined individually.' },
+    { h: 'Step 3. Medical commission',
+      ps: ['After the necessary examination, the issue of referral to medical-social expertise is considered by the medical organization in the established order.', 'If there are grounds, a referral to MSE is issued.'] },
+    { h: 'Step 4. Medical-social expertise',
+      ps: ['MSE assesses the child\u2019s condition, limitations in life activities, need for social support, and other established criteria.', 'Based on the expertise results, disability may be established and corresponding support measures determined.'] },
+    { h: 'What categories are established for children?',
+      ps: ['In Kazakhstan:'],
+      list: ['children under 7 years are assigned the category "child with a disability"','children from 7 to 18 years are assigned disability groups I, II, or III in accordance with criteria'] },
+    { h: 'What to do after registration?',
+      ps: ['After disability is established, parents can clarify:'],
+      list: ['the procedure for benefit assignment','the possibility of arranging a benefit for the caregiver','arranging the IHRP','availability of assistive technology devices','rehabilitation services','social services','educational support'] },
+    { h: 'What documents may be needed?',
+      ps: ['The list is determined by the current procedure, but may include:'],
+      list: ['identity documents','medical documents','examination results','referral to MSE','other documents provided for by the procedure'] },
+    { h: 'Where to apply?',
+      list: ['clinic at place of registration','CSC','eGov','social protection authorities'],
+      tail: 'The specific list of documents and MSE procedure is recommended to be clarified at the clinic before applying.' }
+    ] }
+  ]
+} },
+'ras:rehab': { ru: {
   intro: 'Реабилитационная и психолого-педагогическая поддержка детей с расстройствами аутистического спектра может помогать развитию коммуникации, самостоятельности, адаптации и навыков повседневной жизни. РАС проявляется по-разному, поэтому не существует единой программы, которая подходит абсолютно каждому ребёнку.',
   parts: [
   { title: 'Реабилитация детей с РАС в Казахстане',
@@ -2075,7 +2567,59 @@ const ARTICLES = {
     ] }
   ]
 },
-'dcp:rehab': {
+  kz: { intro: 'РАС бар балалардың реабилитациялық және психологиялық-педагогикалық қолдауы коммуникацияны, өз бетінше болуды, бейімделуді және күнделікті өмір дағдыларын дамытуға көмектесе алады. РАС әртүрлі көрінеді, сондықтан әр балаға сай бірдей бағдарлама жоқ.',
+  parts: [
+  { title: 'Қазақстандағы РАС бар балалардың реабилитациясы',
+    blocks: [
+    { h: 'Логопедиялық көмек',
+      ps: ['Жұмыс сөзді, тілді түсінуді, коммуникацияны дамытуға және қолжетімді қарым-қатынас тәсілдерін пайдалануға бағытталуы мүмкін.', 'Егер баланың сөйлеуі қиын болса, балама және қосымша коммуникация (AAC) тәсілдері — карточкалар, символдар немесе арнайы құрылғылар қолданылуы мүмкін.'] },
+    { h: 'Дефектологтық көмек',
+      ps: ['Маман баланың жеке ерекшеліктерін ескере отырып, оқу, танымдық және функционалдық дағдыларды меңгеруге көмектесе алады.'] },
+    { h: 'Психологиялық қолдау',
+      ps: ['Эмоционалдық әл-ауқатқа, өз эмоцияларын түсінуге, бейімделуге, қ焦虑 кезінде қолдау көрсетуге және басқа жеке міндеттерге бағытталуы мүмкін.'] },
+    { h: 'Өз бетінше болуды дамыту',
+      ps: ['Күнделікті дағдылар бойынша жұмыс мынадай элементтерді қамтуы мүмкін:'],
+      list: ['киіну','тамақтану','гигиена','қарапайым күнделікті әрекеттерді орындау','таныс ортада бағдарлану','көмек сұраудың қолжетімді тәсілдерін пайдалану'] },
+    { h: 'Сенсорлық бейімделу',
+      ps: ['Сенсорлық ерекшеліктер болған кезде қоршаған ортаны бейімдеу тәсілдері таңдалуы мүмкін.', 'Мысалы, шуды азайту, визуалды кестелерді пайдалану, сабақтар арасында өту уақытын беру және кеңістікті бейімдеу.'] },
+    { h: 'Медициналық сүйемелдеу',
+      ps: ['Қажет болған кезде бала ұйқысздық, эпилепсия, қ焦虑 немесе медициналық бағалауды талап ететін басқа мәселелер кезінде көмек ала алады.'] },
+    { h: 'Қайдан көмек алуға болады?',
+      ps: ['Қазақстанда ата-аналар мына мекемелерге жүгіне алады:'],
+      list: ['емхана','ПМПК','ҚППК (қалалық психологиялық-педагогикалық консилиум)','психологиялық-педагогикалық қолдау ұйымдары','реабилитациялық орталықтар','мемлекеттік және жеке арнайы мекемелер'] },
+    { h: 'Қалай бастау керек?',
+      list: ['Педиатрға немесе бағытты маманға жүгіну.','Баланың ерекшеліктері мен қажеттіліктерін талдау.','Қажетті ұсыныстар алу.','Қолжетімді мемлекеттік қызметтер туралы білу.','Қажет болған жағдайда ПМПК немесе бағытты ұйымға жүгіну.'],
+      important: 'РАС бар баланы қолдау мінез-құлықтың барлық ерекшеліктерін жоюға бағытталған әрекетке түспеуі тиіс. Мақсат — балаға қолжетімді тәсілмен қарым-қатынас жасауға, өмірге қауіпсіз қатысуға, дағдылар меңгеруге, айналадағы әлемді түсінуге және өзін жайлы сезінуге көмектесу.' }
+    ] }
+  ]
+},
+  en: { intro: 'Rehabilitation and psychological-pedagogical support for children with autism spectrum disorders can help develop communication, independence, adaptation, and everyday life skills. ASD manifests differently, so there is no single program that suits absolutely every child.',
+  parts: [
+  { title: 'Rehabilitation of children with ASD in Kazakhstan',
+    blocks: [
+    { h: 'Speech therapy assistance',
+      ps: ['Work may be aimed at developing speech, understanding language, communication, and the use of accessible ways of interacting.', 'If a child has difficulty speaking, alternative and augmentative communication (AAC) methods may be used, such as cards, symbols, or special devices.'] },
+    { h: 'Defectological assistance',
+      ps: ['A specialist can help in mastering educational, cognitive, and functional skills, taking into account the child\u2019s individual characteristics.'] },
+    { h: 'Psychological support',
+      ps: ['May be aimed at emotional well-being, understanding one\u2019s own emotions, adaptation, support with anxiety, and other individual tasks.'] },
+    { h: 'Developing independence',
+      ps: ['Work on everyday skills may include:'],
+      list: ['dressing','eating','hygiene','performing simple everyday actions','orientation in a familiar environment','using accessible ways of asking for help'] },
+    { h: 'Sensory adaptation',
+      ps: ['When there are sensory features, ways of adapting the surrounding environment may be selected.', 'For example, reducing noise, using visual schedules, allowing time for transitions between activities, and adapting the space.'] },
+    { h: 'Medical support',
+      ps: ['If necessary, the child may receive help with co-occurring conditions, such as sleep disorders, epilepsy, anxiety, or other problems requiring medical evaluation.'] },
+    { h: 'Where can you get help?',
+      ps: ['In Kazakhstan, parents can contact:'],
+      list: ['the clinic','PMPK','CPPC (city psychological-pedagogical consultation)','psychological and pedagogical support organizations','rehabilitation centers','state and private specialized institutions'] },
+    { h: 'How to start?',
+      list: ['Contact a pediatrician or specialized specialist.','Discuss the child\u2019s features and needs.','Obtain the necessary recommendations.','Learn about available state services.','If necessary, contact the PMPK or a specialized organization.'],
+      important: 'Support for a child with ASD should not come down to trying to remove all behavioral features. The goal is to help the child communicate in an accessible way, safely participate in life, acquire skills, understand the world around them, and feel comfortable.' }
+    ] }
+  ]
+} },
+'dcp:rehab': { ru: {
   intro: 'Детский церебральный паралич может по-разному влиять на движения, координацию, речь, повседневные навыки и самостоятельность ребёнка. Реабилитация направлена не на достижение одинакового результата у всех детей, а на развитие функциональных возможностей, улучшение качества жизни и поддержку в повседневных задачах.',
   parts: [
   { title: 'Реабилитация детей с ДЦП в Казахстане',
@@ -2100,7 +2644,57 @@ const ARTICLES = {
       tail: 'Главная цель — не бесконечные занятия, а реальные навыки, комфорт, участие в жизни и доступная поддержка.' }
     ] }
   ]
-}
+},
+  kz: { intro: 'ДЦП қозғалыстарға, координацияға, сөзге, күнделікті дағдыларға және баланың өз бетінше болуына әртүрлі әсер етуі мүмкін. Реабилитация барлық балаларда бірдей нәтижеге қол жеткізуге емес, функционалдық мүмкіндіктерді дамытуға, өмір сапасын жақсартуға және күнделікті міндеттерде қолдау көрсетуге бағытталған.',
+  parts: [
+  { title: 'Қазақстандағы ДЦП бар балалардың реабилитациясы',
+    blocks: [
+    { h: 'Емдік дене шынықтыру және физиотерапия',
+      ps: ['Қозғалыс, тепе-теңдік, координация, функционалдық дағдылар және жеке мүмкіндіктерді ескере отырып физикалық белсенділік бойынша жұмысқа көмектеседі.'] },
+    { h: 'Логопедиялық көмек',
+      ps: ['Сөзді, коммуникацияны, артикуляцияны дамытуға, сондай-ақ қажет болған жағдайда жұту бұзылуларында көмек көрсетуге бағытталуы мүмкін.'] },
+    { h: 'Эрготерапия',
+      ps: ['Күнделікті өмір дағдыларын дамытуға көмектеседі: киіну, тамақтану, заттарды пайдалану, тұрмыстық әрекеттерді орындау және қоршаған ортаны бейімдеу.'] },
+    { h: 'Ортопедиялық сүйемелдеу',
+      ps: ['Баланың жағдайына байланысты ортопедтің бақылауы, ортопедиялық бұйымдарды таңдау, буындардың, бұлшықеттердің және дұрыс қалыптың жағдайын бағалау қажет болуы мүмкін.'] },
+    { h: 'Психологиялық қолдау',
+      ps: ['Балаға бейімделуге, эмоционалдық қиындықтармен күресуге көмектесе алады, ал отбасыға қолдау мен ұсыныстар алуға мүмкіндік береді.'] },
+    { h: 'Реабилитациядан қайда өтуге болады?',
+      ps: ['Реабилитация мына жерде жүргізілуі мүмкін:'],
+      list: ['мемлекеттік реабилитациялық орталықтар','медициналық ұйымдар','арнайы мекемелер','жеке орталықтар','қолжетімді әлеуметтік және медициналық бағдарламалар шеңберінде'] },
+    { h: 'Қалай бастау керек?',
+      list: ['Тіркелген емханаға жүгіну.','Емдеуші дәрігермен баланың қажеттіліктерін талдау.','Қажетті жолдамалар мен тексерулер алу.','Мемлекеттік бағдарламалар бойынша реабилитация мүмкіндігін нақтылау.','ИПАР көзделген ұсыныстар мен қызметтерді тексеру (егер рәсімделген болса).'] },
+    { h: 'Реабилитацияның барлық түрлерінен өту керек пе?',
+      ps: ['Жоқ. Реабилитация жеке таңдалуы тиіс.', 'Сабақтар саны, олардың қарқындылығы және көмек түрі баланың жағдайына, қажеттіліктеріне, медициналық ұсыныстарға және жүктеменің көтерімділігіне байланысты.'],
+      tail: 'Негізгі мақсат — шексіз сабақтар емес, нақты дағдылар, жайлылық, өмірге қатысу және қолжетімді қолдау.' }
+    ] }
+  ]
+},
+  en: { intro: 'Cerebral palsy can differently affect movements, coordination, speech, everyday skills, and the child\u2019s independence. Rehabilitation is aimed not at achieving the same result in all children, but at developing functional abilities, improving quality of life, and supporting everyday tasks.',
+  parts: [
+  { title: 'Rehabilitation of children with CP in Kazakhstan',
+    blocks: [
+    { h: 'Therapeutic exercise and physical therapy',
+      ps: ['Help work on movement, balance, coordination, functional skills, and physical activity, taking into account individual capabilities.'] },
+    { h: 'Speech therapy assistance',
+      ps: ['May be aimed at developing speech, communication, articulation, as well as helping with swallowing disorders if necessary.'] },
+    { h: 'Ergotherapy',
+      ps: ['Helps develop everyday life skills: dressing, eating, using objects, performing household actions, and adapting the environment.'] },
+    { h: 'Orthopedic support',
+      ps: ['Depending on the child\u2019s condition, monitoring by an orthopedist, selection of orthopedic products, and assessment of joints, muscles, and posture may be necessary.'] },
+    { h: 'Psychological support',
+      ps: ['Can help the child adapt and cope with emotional difficulties, and allow the family to receive support and recommendations.'] },
+    { h: 'Where can rehabilitation be done?',
+      ps: ['Rehabilitation can be carried out:'],
+      list: ['in state rehabilitation centers','in medical organizations','in specialized institutions','in private centers','within available social and medical programs'] },
+    { h: 'How to start?',
+      list: ['Contact the clinic at your place of registration.','Discuss the child\u2019s needs with the attending doctor.','Obtain the necessary referrals and examinations.','Clarify the possibility of rehabilitation under state programs.','Check the recommendations and services provided by the IHRP if it has been issued.'] },
+    { h: 'Is it necessary to undergo all types of rehabilitation?',
+      ps: ['No. Rehabilitation should be selected individually.', 'The number of sessions, their intensity, and the type of assistance depend on the child\u2019s condition, needs, medical recommendations, and tolerance of the load.'],
+      tail: 'The main goal is not endless sessions, but real skills, comfort, participation in life, and accessible support.' }
+    ] }
+  ]
+} }
 };
 
 /* ---------- Рендер реальной статьи ---------- */
@@ -2141,7 +2735,7 @@ function renderRealArticle(d, s, art){
 }
 
 /* ---------- Страница «СРОД» (реальная статья) ---------- */
-const SROD_ARTICLE = {
+const SROD_ARTICLE = { ru: {
   intro: 'Союз родителей особенных детей (СРОД) — общественная организация, связанная с поддержкой семей, воспитывающих детей с особенностями развития и инвалидностью. Общественные организации такого типа могут играть важную роль в информировании родителей, защите прав, распространении информации и объединении семей, сталкивающихся с похожими трудностями.',
   parts: [
   { title: 'Чем занимается СРОД?',
@@ -2166,11 +2760,62 @@ const SROD_ARTICLE = {
       tail: 'Общественная поддержка не заменяет медицинскую помощь, однако может стать важным источником информации и поддержки для семей.' }
     ] }
   ]
-};
+},
+  kz: { intro: 'Ерекше балалардың ата-аналары одағы (СРОД) — даму ерекшеліктері мен мүгедектігі бар балаларды тәрбиелеп отырған отбылерге қолдау көрсетуге байланысты қоғамдық ұйым. Осындай типтегі қоғамдық ұйымдар ата-аналарды ақпараттандыруда, құқықтарды қорғауда, ақпарат таратуда және ұқсас қиындықтарға тап болатын отбылерді біріктіруде маңызды рөл атқара алады.',
+  parts: [
+  { title: 'СРОД немен айналысады?',
+    intro: 'Ұйымның қызметі ағымдағы жобалар мен бағдарламаларға байланысты әртүрлі бағыттарды қамтуы мүмкін.',
+    blocks: [
+    { h: 'Ақпараттық қолдау',
+      ps: ['Ата-аналар мүгедектік, әлеуметтік қолдау, реабилитация, білім беру мүмкіндіктері және басқа маңызды бағыттар туралы ақпарат ала алады.'] },
+    { h: 'Отбылерге қолдау',
+      ps: ['Қоғамдық ұйымдар ата-аналарды біріктіре алады, тәжірибе алмасуға, ақпарат бөлісуге және қауымдастықта қолдау табуға көмектесе алады.'] },
+    { h: 'Құқықтарды қорғау',
+      ps: ['Ұйымдар инклюзия, қолжетімділік, әлеуметтік қолдау және мүгедектігі бар балалар құқықтарын қорғау мәселелерін талқылауға қатыса алады.'] },
+    { h: 'Қоғамдық бастамалар',
+      ps: ['Жобаларға байланысты іс-шаралар, ақпараттық науқандар, кездесулер, білім беру бастамалары және басқа белсенділіктер өткізілуі мүмкін.'] }
+    ] },
+  { title: '',
+    blocks: [
+    { h: 'СРОД мемлекеттік медициналық мекеме ме?',
+      ps: ['Жоқ. Қоғамдық ұйым мемлекеттік емхана немесе диагноз қоятын немесе мүгедектік беретін орган емес.', 'Ол қоғамдық, ақпараттық және ұйымдастырушылық қолдау көрсете алады, бірақ медициналық шешімдер мен ресми рәсімдер уәкілетті мекемелер мен мамандармен жүргізіледі.'] },
+    { h: 'Көбірек білу үшін қайда жүгіну керек?',
+      list: ['Ресми сайт: https://srod.kz/','Instagram: @srodkz'],
+      important: 'Жүгінер алдында контактілердің өзектілігін, қызметтердің қолжетімділігін және ағымдағы жобаларды тікелей ұйыммен тексеру ұсынылады.',
+      tail: 'Қоғамдық қолдау медициналық көмекті алмастырмайды, бірақ отбылер үшін маңызды ақпарат пен қолдау көзі бола алады.' }
+    ] }
+  ]
+},
+  en: { intro: 'The Union of Parents of Special Children (SROD) is a public organization associated with supporting families raising children with developmental features and disabilities. Public organizations of this type can play an important role in informing parents, protecting rights, disseminating information, and uniting families facing similar difficulties.',
+  parts: [
+  { title: 'What does SROD do?',
+    intro: 'The organization\u2019s activities may include various directions depending on current projects and programs.',
+    blocks: [
+    { h: 'Informational support',
+      ps: ['Parents can receive information about disability issues, social support, rehabilitation, educational opportunities, and other important areas.'] },
+    { h: 'Family support',
+      ps: ['Public organizations can unite parents, help exchange experience, share information, and find support in the community.'] },
+    { h: 'Rights protection',
+      ps: ['Organizations can participate in discussing issues of inclusion, accessibility, social support, and protection of the rights of children with disabilities.'] },
+    { h: 'Public initiatives',
+      ps: ['Depending on projects, events, information campaigns, meetings, educational initiatives, and other activities may be held.'] }
+    ] },
+  { title: '',
+    blocks: [
+    { h: 'Is SROD a state medical institution?',
+      ps: ['No. A public organization is not a state clinic or an authority that establishes a diagnosis or assigns disability.', 'It can provide public, informational, and organizational support, but medical decisions and official procedures are carried out by authorized institutions and specialists.'] },
+    { h: 'Where to learn more?',
+      list: ['Official website: https://srod.kz/','Instagram: @srodkz'],
+      important: 'Before contacting, it is recommended to verify the relevance of contacts, availability of services, and current projects directly with the organization.',
+      tail: 'Public support does not replace medical help, but can become an important source of information and support for families.' }
+    ] }
+  ]
+} };
 function renderSrodPage(){
+  const A = pickLang(SROD_ARTICLE);
   let n = 0;
   const tocLinks = [];
-  const partsHtml = SROD_ARTICLE.parts.map(part => {
+  const partsHtml = A.parts.map(part => {
     const blocksHtml = part.blocks.map(b => {
       n++;
       const id = 'ssec' + n;
@@ -2191,7 +2836,7 @@ function renderSrodPage(){
     <div class="article-head">
       <div class="breadcrumb"><a href="#/">${tr('crumb_home')}</a><span class="sep">→</span><span>${tr('sp_srod_t')}</span></div>
       <h1>${tr('sp_srod_t')}</h1>
-      <p class="lead">${SROD_ARTICLE.intro}</p>
+      <p class="lead">${A.intro}</p>
     </div>
     <div class="article-layout">
       <aside class="toc"><b>${tr('toc_title')}</b>${toc}</aside>
@@ -2204,7 +2849,7 @@ function renderSrodPage(){
 
 /* ---------- Реальные тематические статьи (в «Статьях») ---------- */
 const TOPIC_ARTICLES = {
-'ras:0': {
+'ras:0': { ru: {
   title: 'Можно ли излечить аутизм?',
   intro: 'Можно ли полностью избавиться от аутизма? Почему одни обещают «вылечить» РАС, а другие говорят, что это невозможно? И что на самом деле помогает ребёнку? Этот вопрос возникает у многих родителей сразу после постановки диагноза.',
   parts: [
@@ -2230,7 +2875,59 @@ const TOPIC_ARTICLES = {
       ps: ['Аутизм нельзя гарантированно излечить с помощью существующих научно доказанных методов. Но это не означает, что ребёнок не сможет развиваться, приобретать навыки, учиться, общаться и становиться более самостоятельным.', 'Вместо обещаний избавить от аутизма ребёнку нужна своевременная, качественная и индивидуально подобранная поддержка. И именно на этом стоит сосредоточиться.'] }
     ] }
   ]
-}
+},
+  kz: { title: 'Аутизмді сауықтыруға бола ма?',
+  intro: 'Аутизмнен толықтай арылуға бола ма? Неге біреулер РАС-ты «емдеймін» деп уәде береді, ал басқалары бұл мүмкін емес дейді? Және балаға шынымен нәзі көмектеседі? Бұл сұрақ диагноз қойылғаннан кейін көп ата-ананың көңіліне түседі.',
+  parts: [
+  { title: '',
+    blocks: [
+    { h: 'Аутизмді емдеуге бола ма?',
+      ps: ['Қазіргі кезде аутизм спектрінің бұзылыстарын (РАС) кепілдендірілген және толық түрде жоятын ғылыми дәлелденген әдіс жоқ.', 'РАС — бұл адамның айналадағы әлемді қалай қабылдайтынына, басқа адамдармен қалай өзара әрекеттесетініне, қарым-қатынас жасауына, сенсорлық ақпаратты өңдеуіне және әртүрлі жағдайларға қалай бейімделетініне әсер ететін нейродамудың ерекшелігі.', 'Аутизм — жойылатын ластану емес және нашар тәрбиеден, махаббаттың жетіспеуінен немесе гаджеттерді пайдаланудан туындамайды.'] },
+    { h: 'Неге кейбір ата-аналар балалары «емделді» дейді?',
+      ps: ['Баланың дамуы тоқтамайды. Қолдау, оқу, есейу, қолайлы орта және жеке жұмыс арқасында кейбір балалар сөзді, коммуникацияны, өз бетінше болуды және әлеуметтік дағдыларды айтарлықтай дамытады.', 'Жеке жағдайларда РАС диагнозы алған адам кейінірек диагностикалық критерийлерге сәйкес келмей қалуы мүмкін. Алайда бұл аутизмнің универсалды емі бар дегенді немесе осындай нәтиже әр балаға кепілдендіріледі дегенді білдірмейді.', 'Дағдылардың жақсаруы, қиындықтардың азаюы және аутизм көріністерінің өзгеруі — кепілдендірілген сауығумен бірдей емес.'] },
+    { h: 'РАС бар балаға шынымен нәзі көмектеседі?',
+      ps: ['Уәде етілген керемет әдісті іздеу орнына баланың нақты қажеттіліктерін қолдауға назар аудару маңызды. Бұл мынадай элементтерді қамтуы мүмкін:'],
+      list: ['логопедиялық көмек және коммуникацияны дамыту','балама және қосымша коммуникация (AAC), егер баланың сөйлеуі қиын болса','психологиялық-педагогикалық қолдау','өз бетінше болу және күнделікті өмір дағдыларын дамыту','ортады сенсорлық ерекшеліктерге бейімдеу','қатар жүретін жағдайлар кезінде көмек, мысалы ұйқысздық, қ焦虑 немесе эпилепсия'],
+      tail: 'Қолдау жеке таңдалады. Әр балаға бірдей сабақтар, бірдей қарқын немесе бірдей тәсіл қажет емес.' },
+    { h: 'Дәрілер туралы не айтуға болады?',
+      ps: ['Дәрілер аутизмді жоймайды. Айнако дәрігер қатар жүретін жеке жағдайлар немесе симптомдар үшін медициналық ем тағайындай алады, егер бұл қажет болса.', 'Қатар жүретін жағдайды емдеу мен РАС-тың өзін медикаментозно жою әрекеті арасындағы айырмашылықты түсіну маңызды.'] },
+    { h: 'Толық сауығу уәделеріне сену керек пе?',
+      ps: ['Егер сізге баланы аутизмнен белгілі бір мерзімде толық арылдыруға уәде берсе, барлық балаларға универсалды әдіс ұсынса немесе медициналық және педагогикалық қолдаудан бас тартып, балама ем пайдасына көндірсе, сақ болу керек.'],
+      important: 'Әсіресе эффективтігі ғылыми дәлелденбеген, қауіпті болуы мүмкін немесе қажетті медициналық араласулардан бас тартуды талап ететін әдістерге сақтықпен қарау керек.',
+      tail: 'Ата-аналар баласына көмектегісі келгені үшін өзін-өзі кінәлаудың қажеті жоқ. Бірақ үміт уақыт, ақша және қауіпсіздікті жоғалту себебіне айналмауы маңызды.' },
+    { h: 'Аутизмнің барлық көріністерін жою керек пе?',
+      ps: ['Аутизмнің әр көрінісі жою қажет мәселе емес.', 'Кейбір қайталанатын қозғалыстар, қызығушылықтар, қарым-қатынас тәсілдері немесе сенсорлық әдеттер балаға өз жағдайын реттеуге және жайлы сезінуге көмектесе алады. Егер мінез-құлық зиян келтірмесе және балаңыздың өзіне кедергі келтірмесе, оны басуға әрдайым тырысудың қажеті жоқ.', 'Қолдау мақсаты — баланы айналадағы адамдарға максималды ұқсату емес, оған қауіпсіз өмір сүруге, қарым-қатынас жасауға, оқуға, дамуға және жайлы сезінуге көмектесу.'] },
+    { h: 'Негізгісі',
+      ps: ['Аутизмді бар болатын ғылыми дәлелденген әдістермен кепілдендірілген түрде сауықтыру мүмкін емес. Бірақ бұл бала дамыға, дағдылар меңгеруге, оқуға, қарым-қатынас жасауға және өз бетінше бола түсуге қабілетті емес дегенді білдірмейді.', 'Аутизмнен арылту уәделері орнына балаға уақытылы, сапалы және жеке таңдалған қолдау қажет. Және дәл осыған назар аудару керек.'] }
+    ] }
+  ]
+},
+  en: { title: 'Can autism be cured?',
+  intro: 'Can autism be completely cured? Why do some promise to \u201ccure\u201d ASD while others say it is impossible? And what actually helps a child? This question arises for many parents right after the diagnosis is made.',
+  parts: [
+  { title: '',
+    blocks: [
+    { h: 'Can autism be cured?',
+      ps: ['To date, there is no scientifically proven method that would reliably and completely eliminate autism spectrum disorders (ASD).', 'ASD is a feature of neurodevelopment that affects how a person perceives the world around them, interacts with other people, communicates, processes sensory information, and adapts to various situations.', 'Autism is not an infection that can be destroyed with a pill, and it does not arise from poor upbringing, lack of love, or the use of gadgets.'] },
+    { h: 'Why do some parents say their child was \u201ccured\u201d?',
+      ps: ['A child\u2019s development does not stand still. Thanks to support, learning, growing up, a suitable environment, and individual work, some children significantly develop speech, communication, independence, and social skills.', 'In individual cases, a person who previously received an ASD diagnosis may later cease to meet the diagnostic criteria. However, this does not mean there is a universal cure for autism or that such a result can be guaranteed to every child.', 'Improving skills, reducing difficulties, and changing the manifestations of autism are not the same as a guaranteed cure.'] },
+    { h: 'What actually helps a child with ASD?',
+      ps: ['Instead of searching for a promised miracle method, it is important to focus on supporting the child\u2019s specific needs. This may include:'],
+      list: ['speech therapy assistance and developing communication','alternative and augmentative communication (AAC) if the child has difficulty speaking','psychological and pedagogical support','developing independence and everyday life skills','adapting the environment to sensory features','help with co-occurring conditions, such as sleep disorders, anxiety, or epilepsy'],
+      tail: 'Support is selected individually. Not every child needs the same sessions, the same intensity, or the same approach.' },
+    { h: 'What about medications?',
+      ps: ['Medications do not eliminate autism. However, a doctor may prescribe medical treatment for individual co-occurring conditions or symptoms if necessary.', 'It is important to understand the difference between treating a co-occurring condition and trying to medicinally eliminate ASD itself.'] },
+    { h: 'Should you believe promises of a complete cure?',
+      ps: ['If you are promised to completely rid your child of autism within a certain period, offered a universal method for all children, or persuaded to give up medical and pedagogical support in favor of alternative treatment, you should be wary.'],
+      important: 'Be especially careful with methods that lack scientific evidence of effectiveness, may be dangerous, or require giving up necessary medical interventions.',
+      tail: 'Parents should not blame themselves for wanting to help their child. But it is important that hope does not become a reason for losing time, money, and safety.' },
+    { h: 'Should you try to remove all manifestations of autism?',
+      ps: ['Not every manifestation of autism is a problem that needs to be eliminated.', 'Some repetitive movements, interests, ways of communicating, or sensory habits can help the child regulate their state and feel calmer. If the behavior does not cause harm and does not interfere with the child, it is not always necessary to suppress it.', 'The goal of support is not to make the child as similar as possible to those around them, but to help them live safely, communicate, learn, develop, and feel comfortable.'] },
+    { h: 'The main thing',
+      ps: ['Autism cannot be guaranteed to be cured with existing scientifically proven methods. But this does not mean the child will not be able to develop, acquire skills, learn, communicate, and become more independent.', 'Instead of promises to rid the child of autism, what is needed is timely, high-quality, and individually selected support. And that is exactly what to focus on.'] }
+    ] }
+  ]
+} }
 };
 
 function renderTopicRealPage(art){
@@ -2279,7 +2976,7 @@ function renderTopicRealPage(art){
 }
 
 /* ---------- Страница «О сайте» (реальный текст владельца) ---------- */
-const ABOUT_ARTICLE = {
+const ABOUT_ARTICLE = { ru: {
   intro: 'Этот сайт был создан для поддержки родителей и опекунов, чьи дети относятся к уязвимым группам населения и нуждаются в особом внимании, заботе и поддержке.',
   parts: [
   { title: '',
@@ -2294,11 +2991,42 @@ const ABOUT_ARTICLE = {
       ps: ['По вопросам, предложениям и обратной связи:', 'Telegram: <a href="https://t.me/darkkimk" target="_blank" rel="noopener">@darkkimk</a>'] }
     ] }
   ]
-};
+},
+  kz: { intro: 'Бұл сайт осал топтарға жататын және ерекше назар, қамқорлық пен қолдауды қажет ететін балалары бар ата-аналар мен қамқоршыларды қолдау үшін құрылды.',
+  parts: [
+  { title: '',
+    blocks: [
+    { h: 'Мен туралы',
+      ps: ['Менің атым Дарья, маған 16 жас. Маған 6 жас болғанда, ағама аутизм спектрінің бұзылыстары (РАС) диагнозы қойылды.', 'Қазақстанда мүгедектігі балаларға қолдау шаралары бар болса да, көптеген ата-аналар әлі де өз құқықтарынан, қолжетімді жеңілдіктерден, мемлекеттік қызметтерден және көмек мүмкіндіктерінен хабарсыз.'] },
+    { h: 'Бұл сайт кімге арналған',
+      ps: ['Бұл сайт баласына диагноз қойылған ата-аналар мен қамқоршыларға арналған: олар шошып, қорқып қалған немесе не істеуден бастау керектігін білмейтін жағдайларға көмектесу үшін.', 'Мұнда мүгедектігі балалардың құқықтары, мемлекеттік қолдау шаралары, жеңілдіктер, реабилитация және отбылер осы жолда кездесуі мүмкін басқа маңызды мәселелер туралы ақпарат жинақталған.'] },
+    { h: 'Жобаның мақсаты',
+      ps: ['Мен қолжетімді әрі түсінікті ақпарат тек практикалық көмек ғана емес, көптеген отбылерге моральдық тірек бола алатынына сенемін.', 'Жобаның басты мақсаты — тек ақпарат бермей, мүгедектігі балаларды тәрбиелеп отырған отбылер кездесетін мәселелерге назар аудару және олар жалғыз қалмайтынын сезіну мүмкіндігін беру.'] },
+    { h: 'Кері байланыс',
+      ps: ['Сұрақтар, ұсыныстар және кері байланыс бойынша:', 'Telegram: <a href="https://t.me/darkkimk" target="_blank" rel="noopener">@darkkimk</a>'] }
+    ] }
+  ]
+},
+  en: { intro: 'This website was created to support parents and guardians whose children belong to vulnerable groups of the population and need special attention, care, and support.',
+  parts: [
+  { title: '',
+    blocks: [
+    { h: 'About me',
+      ps: ['My name is Darya, I am 16 years old. When I was 6 years old, my brother was diagnosed with Autism Spectrum Disorder (ASD).', 'Despite the existing support measures for children with disabilities in Kazakhstan, many parents still do not know about their rights, available benefits, state services, and opportunities for help.'] },
+    { h: 'Who this site is for',
+      ps: ['This site is created for parents and guardians who have encountered their child\u2019s diagnosis, feel confused, scared, or do not know where to start.', 'Here is collected information about the rights of children with disabilities, state support measures, benefits, rehabilitation, and other important issues that families may face on this path.'] },
+    { h: 'The goal of the project',
+      ps: ['I believe that accessible and understandable information can become not only practical help, but also moral support for many families.', 'The main goal of the project is not just to inform, but also to draw attention to the problems faced by families raising children with disabilities, and to give them the opportunity to feel that they are not left alone.'] },
+    { h: 'Feedback',
+      ps: ['For questions, suggestions, and feedback:', 'Telegram: <a href="https://t.me/darkkimk" target="_blank" rel="noopener">@darkkimk</a>'] }
+    ] }
+  ]
+} };
 function renderAboutPage(){
+  const A = pickLang(ABOUT_ARTICLE);
   let n = 0;
   const tocLinks = [];
-  const partsHtml = ABOUT_ARTICLE.parts.map(part => {
+  const partsHtml = A.parts.map(part => {
     const blocksHtml = part.blocks.map(b => {
       n++;
       const id = 'asec' + n;
@@ -2319,7 +3047,7 @@ function renderAboutPage(){
     <div class="article-head">
       <div class="breadcrumb"><a href="#/">${tr('crumb_home')}</a><span class="sep">→</span><span>${tr('sp_about_t')}</span></div>
       <h1>${tr('sp_about_t')}</h1>
-      <p class="lead">${ABOUT_ARTICLE.intro}</p>
+      <p class="lead">${A.intro}</p>
     </div>
     <div class="article-layout">
       <aside class="toc"><b>${tr('toc_title')}</b>${toc}</aside>
